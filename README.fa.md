@@ -11,7 +11,7 @@
 
 [![Manifest V3](https://img.shields.io/badge/manifest-V3-6366f1?style=flat-square)](manifest.json)
 [![Tests](https://img.shields.io/badge/tests-122_unit_+_97_browser-22c55e?style=flat-square)](test/)
-[![Network requests](https://img.shields.io/badge/network_requests-zero-0ea5e9?style=flat-square)](#حریم-خصوصی-و-مجوزها)
+[![Network requests](https://img.shields.io/badge/network_requests-zero-0ea5e9?style=flat-square)](#privacy)
 [![Size](https://img.shields.io/badge/download-452_KB-a855f7?style=flat-square)](../../releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-64748b?style=flat-square)](LICENSE)
 
