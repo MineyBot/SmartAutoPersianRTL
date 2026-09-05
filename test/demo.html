@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Persian Web Mixer — demo</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1f2328; --mut:#59636e; --line:#e4e8ec; --acc:#6366f1; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 22px;
+    font: 15px/1.75 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--fg);
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .turn { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  /* برچسب نقش بالای پیام می‌نشیند، نه در ستون کنارِ آن. اگر ستون کنار باشد،
+   * متن راست‌چین‌شده از آواتار فاصله می‌گیرد و در تصویر مقایسه‌ای «نیمه‌آینه»
+   * به‌نظر می‌رسد — در حالی که افزونه عمداً چیدمان سایت را دست نمی‌زند. */
+  .who {
+    display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+    margin-bottom: 7px; border-radius: 6px;
+    font-size: 10.5px; font-weight: 700; color: #fff; letter-spacing: .4px;
+  }
+  .who.a { background: linear-gradient(135deg, #6366f1, #a855f7); }
+  .who.u { background: #64748b; }
+  .body { min-width: 0; }
+  .body > *:first-child { margin-top: 0; }
+  .body > *:last-child { margin-bottom: 0; }
+  p { margin: 0 0 10px; }
+  h4 { margin: 14px 0 6px; font-size: 14px; }
+  ul, ol { margin: 0 0 10px; padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  pre {
+    margin: 10px 0; padding: 11px 13px; border-radius: 8px; overflow-x: auto;
+    background: #0d1117; color: #e6edf3; font: 12.5px/1.6 ui-monospace, Consolas, monospace;
+  }
+  code:not(pre code) {
+    padding: 1px 5px; border-radius: 5px; background: #f1f3f5;
+    font: 12.5px ui-monospace, Consolas, monospace;
+  }
+  blockquote {
+    margin: 10px 0; padding-left: 12px; border-left: 3px solid #cbd5e1; color: var(--mut);
+  }
+  table { border-collapse: collapse; margin: 10px 0; font-size: 13.5px; width: 100%; }
+  th, td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; }
+  th { background: #f6f8fa; font-weight: 600; }
+  .composer { margin-top: 16px; display: flex; gap: 8px; }
+  textarea {
+    flex: 1; min-height: 62px; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 10px; font: inherit; font-size: 14px; resize: none;
+  }
+  button {
+    padding: 0 18px; border: 0; border-radius: 10px; background: var(--acc); color: #fff;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="turn">
+    <div class="who u">YOU</div>
+    <div class="body">
+      <p>یک تابع مرتب‌سازی سریع در پایتون بنویس و پیچیدگی‌اش را توضیح بده.</p>
+    </div>
+  </div>
+
+  <div class="turn">
+    <div class="who a">AI</div>
+    <div class="body">
+      <p>حتماً. پیاده‌سازی <code>quicksort</code> با روش تقسیم و حل به این شکل است:</p>
+      <pre><code>def quicksort(arr):
+    if len(arr) &lt;= 1:
+        return arr
+    p = arr[len(arr) // 2]
+    lo = [x for x in arr if x &lt; p]
+    eq = [x for x in arr if x == p]
+    hi = [x for x in arr if x &gt; p]
+    return quicksort(lo) + eq + quicksort(hi)</code></pre>
+
+      <h4>مراحل کار</h4>
+      <ol>
+        <li>یک عنصر به‌عنوان محور (<code>pivot</code>) انتخاب می‌شود.</li>
+        <li>آرایه به سه بخش کوچک‌تر، مساوی و بزرگ‌تر تقسیم می‌شود.</li>
+        <li>پیچیدگی زمانی میانگین <code>O(n log n)</code> و بدترین حالت <code>O(n²)</code> است.</li>
+      </ol>
+
+      <blockquote>نکته: انتخاب محورِ تصادفی از بدترین حالت <code>O(n²)</code> روی داده‌ی از پیش مرتب جلوگیری می‌کند.</blockquote>
+
+      <table>
+        <tr><th>حالت</th><th>Time</th><th>Space</th></tr>
+        <tr><td>میانگین</td><td>O(n log n)</td><td>O(n)</td></tr>
+        <tr><td>بدترین</td><td>O(n²)</td><td>O(n)</td></tr>
+      </table>
+
+      <p>این پیاده‌سازی در هر فراخوانی سه لیست تازه می‌سازد، پس حافظه‌اش <code>O(n)</code> است؛ نسخه‌ی in-place با <code>O(log n)</code> کار می‌کند.</p>
+
+      <p>The same partitioning logic works identically in JavaScript — this paragraph is Latin-first, so it must stay left-to-right.</p>
+    </div>
+  </div>
+
+  <div class="composer">
+    <textarea placeholder="پیام خود را بنویسید…">حالا نسخه‌ی in-place آن را با Hoare partition بنویس</textarea>
+    <button>ارسال</button>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "persian-web-mixer",
+  "version": "4.0.0",
+  "private": true,
+  "description": "Chromium extension: smart RTL for Persian/Arabic text anywhere on the web",
+  "scripts": {
+    "test": "node test/run.js",
+    "test:browser": "node test/browser.js",
+    "test:all": "node test/run.js && node test/browser.js",
+    "pack": "node tools/pack.js"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "puppeteer-core": "24.10.2"
+  }
+}

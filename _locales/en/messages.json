@@ -1,0 +1,23 @@
+{
+  "extName": {
+    "message": "Persian Web Mixer — Smart RTL",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Detects Persian/Arabic text anywhere on the web and applies precise RTL layout: per-site profiles for AI chatbots, Shadow DOM support, bundled offline fonts, and no tampering with site security headers.",
+    "description": "Store description"
+  },
+  "actionTitle": {
+    "message": "Persian Web Mixer",
+    "description": "Toolbar button title"
+  },
+  "cmdToggleSite": {
+    "message": "Toggle for current site"
+  },
+  "cmdToggleGlobal": {
+    "message": "Toggle extension globally"
+  },
+  "cmdRescan": {
+    "message": "Rescan page"
+  }
+}

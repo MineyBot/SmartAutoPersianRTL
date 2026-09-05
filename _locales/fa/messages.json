@@ -1,0 +1,23 @@
+{
+  "extName": {
+    "message": "Persian Web Mixer — راست‌چین‌ساز هوشمند",
+    "description": "نام افزونه"
+  },
+  "extDescription": {
+    "message": "تشخیص خودکار متن فارسی و راست‌چین‌سازی دقیق آن در همه‌ی وب؛ با پروفایل اختصاصی چت‌بات‌های هوش مصنوعی، پشتیبانی Shadow DOM، فونت آفلاین و بدون دست‌کاری امنیت سایت‌ها.",
+    "description": "توضیح فروشگاه"
+  },
+  "actionTitle": {
+    "message": "Persian Web Mixer",
+    "description": "عنوان دکمه‌ی نوار ابزار"
+  },
+  "cmdToggleSite": {
+    "message": "روشن/خاموش برای سایت فعلی"
+  },
+  "cmdToggleGlobal": {
+    "message": "روشن/خاموش کلی افزونه"
+  },
+  "cmdRescan": {
+    "message": "پویش دوباره‌ی صفحه"
+  }
+}

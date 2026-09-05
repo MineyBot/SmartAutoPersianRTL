@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="color-scheme" content="dark light" />
+  <title>تنظیمات Persian Web Mixer</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-brand">
+      <span class="mark">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M20 6H8M20 12H11M20 18H4" />
+        </svg>
+      </span>
+      <div>
+        <h1>Persian Web Mixer</h1>
+        <p>راست‌چین‌سازی هوشمند متن فارسی در همه‌ی وب — نسخه <span id="ver">4.0.0</span></p>
+      </div>
+    </div>
+    <div class="hero-actions">
+      <button class="btn" id="export">برون‌بری تنظیمات</button>
+      <label class="btn" for="import-file">درون‌ریزی</label>
+      <input type="file" id="import-file" accept=".json" hidden />
+      <button class="btn danger" id="reset">بازگردانی به پیش‌فرض</button>
+    </div>
+  </header>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="general" aria-selected="true">عمومی</button>
+    <button data-tab="typo">تایپوگرافی</button>
+    <button data-tab="sites">سایت‌ها</button>
+    <button data-tab="adv">پیشرفته</button>
+    <button data-tab="lab">آزمایشگاه</button>
+    <button data-tab="about">درباره</button>
+  </nav>
+
+  <!-- ============================================================ عمومی -->
+  <section class="pane" data-pane="general">
+    <div class="card">
+      <div class="card-head">
+        <h2>وضعیت کلی</h2>
+        <label class="sw"><input type="checkbox" id="enabled" /><span class="track"><span class="knob"></span></span></label>
+      </div>
+      <p class="desc">کلید اصلی افزونه. با میان‌بر <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> هم قابل تغییر است.</p>
+    </div>
+
+    <div class="card">
+      <h2>دامنه‌ی فعالیت</h2>
+      <p class="desc">مشخص می‌کند افزونه در چه سایت‌هایی به‌طور پیش‌فرض کار کند. تصمیم‌های دستی هر سایت بر این تنظیم اولویت دارند.</p>
+      <div class="radios" id="scope">
+        <label><input type="radio" name="scope" value="all" /><span><b>همه‌ی سایت‌ها</b><small>هر جا متن فارسی دیده شد</small></span></label>
+        <label><input type="radio" name="scope" value="known" /><span><b>سایت‌های شناخته‌شده</b><small>فقط پروفایل‌های تعریف‌شده</small></span></label>
+        <label><input type="radio" name="scope" value="ai" /><span><b>فقط چت‌بات‌ها</b><small>ChatGPT، Claude، Gemini و …</small></span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>حالت تشخیص جهت</h2>
+      <div class="radios" id="mode">
+        <label><input type="radio" name="mode" value="smart" /><span><b>هوشمند</b><small>نسبت حروف فارسی به کل حروف؛ بهترین گزینه برای متن مخلوط</small></span></label>
+        <label><input type="radio" name="mode" value="auto" /><span><b>خودکار</b><small>جهت از اولین حرف قوی؛ رفتار استاندارد یونیکد</small></span></label>
+        <label><input type="radio" name="mode" value="force" /><span><b>سخت‌گیر</b><small>هر بلوکی که حتی یک حرف فارسی دارد راست‌چین می‌شود</small></span></label>
+      </div>
+      <div class="field">
+        <label for="threshold">آستانه‌ی حالت هوشمند</label>
+        <div class="range-row">
+          <input type="range" id="threshold" min="5" max="100" step="5" />
+          <output id="threshold-out">۳۰٪</output>
+        </div>
+        <small class="desc">اگر سهم حروف فارسی از این مقدار بیشتر باشد، بلوک راست‌چین می‌شود.</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>فونت</h2>
+        <label class="sw"><input type="checkbox" id="font-enabled" /><span class="track"><span class="knob"></span></span></label>
+      </div>
+      <div class="font-grid" id="font-grid"></div>
+      <div class="field">
+        <label>فونت دلخواه</label>
+        <div class="row-inline">
+          <label class="btn ghost" for="font-file">انتخاب فایل (woff2 / ttf)</label>
+          <input type="file" id="font-file" accept=".woff2,.woff,.ttf,.otf" hidden />
+          <span class="pill" id="font-name" hidden></span>
+          <button class="btn danger sm" id="font-clear" hidden>حذف</button>
+        </div>
+        <small class="desc">فونت به‌صورت آفلاین در حافظه‌ی افزونه ذخیره می‌شود و هیچ درخواستی به اینترنت فرستاده نمی‌شود.</small>
+      </div>
+      <div class="field">
+        <label for="font-scale">اندازه‌ی فونت</label>
+        <div class="range-row">
+          <input type="range" id="font-scale" min="70" max="160" step="5" />
+          <output id="font-scale-out">۱۰۰٪</output>
+        </div>
+      </div>
+      <div class="field">
+        <label for="digits">ارقام</label>
+        <select id="digits">
+          <option value="auto">مطابق فونت</option>
+          <option value="farsi">فارسی (۱۲۳)</option>
+          <option value="latin">لاتین (123)</option>
+        </select>
+      </div>
+      <label class="chk"><input type="checkbox" id="font-latin" /><span>فونت فارسی روی متن‌های لاتین هم اعمال شود</span></label>
+      <div class="preview" id="font-preview">
+        نمونه: در سال ۱۴۰۴ کتابخانه‌ی <span class="ltr">React</span> با ۱۲۳۴ ستاره در گیت‌هاب منتشر شد.
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= تایپوگرافی -->
+  <section class="pane" data-pane="typo" hidden>
+    <div class="card">
+      <h2>خوانایی متن</h2>
+      <div class="field">
+        <label for="lh">ارتفاع خط</label>
+        <div class="range-row">
+          <input type="range" id="lh" min="0" max="30" step="1" />
+          <output id="lh-out">پیش‌فرض</output>
+        </div>
+      </div>
+      <div class="field">
+        <label for="ls">فاصله‌ی حروف (px)</label>
+        <div class="range-row">
+          <input type="range" id="ls" min="-10" max="30" step="1" />
+          <output id="ls-out">۰</output>
+        </div>
+      </div>
+      <div class="field">
+        <label for="ws">فاصله‌ی کلمات (px)</label>
+        <div class="range-row">
+          <input type="range" id="ws" min="-20" max="80" step="2" />
+          <output id="ws-out">۰</output>
+        </div>
+      </div>
+      <div class="field">
+        <label for="pg">فاصله‌ی پاراگراف‌ها (px)</label>
+        <div class="range-row">
+          <input type="range" id="pg" min="0" max="32" step="2" />
+          <output id="pg-out">۰</output>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>اصلاح چیدمان</h2>
+      <div class="chk-grid">
+        <label class="chk"><input type="checkbox" id="justify" /><span>هم‌ترازی دوطرفه‌ی پاراگراف‌ها</span></label>
+        <label class="chk"><input type="checkbox" id="fixList" /><span>اصلاح تودرتویی لیست‌ها</span></label>
+        <label class="chk"><input type="checkbox" id="fixQuote" /><span>اصلاح خط کنار نقل‌قول</span></label>
+        <label class="chk"><input type="checkbox" id="fixTable" /><span>راست‌چین‌سازی جداول</span></label>
+        <label class="chk"><input type="checkbox" id="keepCode" /><span>کد و فرمول همیشه چپ‌چین</span></label>
+        <label class="chk"><input type="checkbox" id="isolate" /><span>جداسازی دوجهته‌ی قطعات لاتین</span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>فیلدهای ورودی</h2>
+      <div class="chk-grid">
+        <label class="chk"><input type="checkbox" id="inputs" /><span>راست‌چین‌سازی خودکار ورودی‌ها</span></label>
+        <label class="chk"><input type="checkbox" id="placeholders" /><span>اصلاح متن راهنما (placeholder)</span></label>
+        <label class="chk"><input type="checkbox" id="liveTyping" /><span>تشخیص لحظه‌ای هنگام تایپ</span></label>
+      </div>
+      <p class="desc">ورودی‌ها با <code>unicode-bidi: plaintext</code> مدیریت می‌شوند؛ یعنی جهت هر خط را خود مرورگر از اولین حرف همان خط تشخیص می‌دهد. نتیجه: بدون هیچ پردازشی در هر ضربه‌ی کلید، متن مخلوط فارسی و انگلیسی درست نمایش داده می‌شود.</p>
+      <div class="field">
+        <label for="try-input">آزمودن</label>
+        <textarea id="try-input" rows="3" placeholder="اینجا فارسی و English را با هم بنویسید…"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ سایت‌ها -->
+  <section class="pane" data-pane="sites" hidden>
+    <div class="card">
+      <h2>تنظیمات اختصاصی سایت‌ها</h2>
+      <p class="desc">هر دامنه‌ای که به‌صورت دستی روشن یا خاموش کرده باشید اینجا فهرست می‌شود.</p>
+      <div class="row-inline">
+        <input type="text" id="site-input" placeholder="example.com" dir="ltr" />
+        <button class="btn" id="site-add-on">افزودن (روشن)</button>
+        <button class="btn ghost" id="site-add-off">افزودن (خاموش)</button>
+      </div>
+      <div id="site-list" class="site-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>پروفایل‌های آماده</h2>
+      <p class="desc">این سایت‌ها سلکتورهای اختصاصی دارند؛ یعنی افزونه دقیقاً می‌داند حباب پیام کدام است و کدام بخش را نباید دست بزند.</p>
+      <div id="profile-list" class="profile-list"></div>
+    </div>
+  </section>
+
+  <!-- =========================================================== پیشرفته -->
+  <section class="pane" data-pane="adv" hidden>
+    <div class="card">
+      <h2>موتور</h2>
+      <div class="chk-grid">
+        <label class="chk"><input type="checkbox" id="pierce" /><span>نفوذ در Shadow DOM</span></label>
+        <label class="chk"><input type="checkbox" id="openClosed" /><span>بازکردن Shadow Root های بسته</span></label>
+        <label class="chk"><input type="checkbox" id="badge" /><span>نشان وضعیت روی آیکن</span></label>
+        <label class="chk"><input type="checkbox" id="debug" /><span>حالت اشکال‌زدایی (کادر رنگی + لاگ)</span></label>
+      </div>
+      <div class="field">
+        <label for="debounce">تأخیر واکنش به تغییرات (ms)</label>
+        <div class="range-row">
+          <input type="range" id="debounce" min="0" max="400" step="10" />
+          <output id="debounce-out">۶۰</output>
+        </div>
+        <small class="desc">مقدار کمتر = واکنش سریع‌تر، مصرف CPU بیشتر. برای چت‌بات‌های استریمی ۶۰ تا ۱۲۰ مناسب است.</small>
+      </div>
+      <div class="field">
+        <label for="budget">سقف زمان هر برش پردازش (ms)</label>
+        <div class="range-row">
+          <input type="range" id="budget" min="2" max="30" step="1" />
+          <output id="budget-out">۸</output>
+        </div>
+        <small class="desc">موتور کار سنگین را به برش‌های کوتاه تقسیم می‌کند تا اسکرول و انیمیشن صفحه کند نشود.</small>
+      </div>
+      <label class="chk"><input type="checkbox" id="mirror" /><span>آینه‌کردن حاشیه‌های چیدمان (آزمایشی)</span></label>
+    </div>
+
+    <div class="card">
+      <h2>ابزارها</h2>
+      <div class="row-inline">
+        <button class="btn" id="inject">تزریق به تب‌های باز</button>
+        <span class="desc" id="inject-out"></span>
+      </div>
+      <p class="desc">پس از نصب یا به‌روزرسانی، تب‌هایی که از قبل باز بوده‌اند اسکریپت افزونه را ندارند. این دکمه بدون بارگذاری مجدد، آن‌ها را فعال می‌کند.</p>
+    </div>
+  </section>
+
+  <!-- ======================================================== آزمایشگاه -->
+  <section class="pane" data-pane="lab" hidden>
+    <div class="card">
+      <h2>سنجش تشخیص جهت</h2>
+      <p class="desc">متن را بنویسید تا ببینید موتور با تنظیمات فعلی چه تصمیمی می‌گیرد.</p>
+      <textarea id="lab-text" rows="4">این یک متن آزمایشی است که کلمه‌ی technology در آن آمده.</textarea>
+      <div class="lab-out" id="lab-out"></div>
+      <div class="lab-preview" id="lab-preview"></div>
+    </div>
+    <div class="card">
+      <h2>نمونه‌های آماده</h2>
+      <div class="samples" id="samples"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================= درباره -->
+  <section class="pane" data-pane="about" hidden>
+    <div class="card">
+      <h2>میان‌برهای صفحه‌کلید</h2>
+      <table class="kbd-table">
+        <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd></td><td>روشن/خاموش برای سایت فعلی</td></tr>
+        <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td>کلید اصلی افزونه</td></tr>
+        <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></td><td>پویش دوباره‌ی صفحه</td></tr>
+      </table>
+      <p class="desc">میان‌برها را می‌توانید در <code>chrome://extensions/shortcuts</code> تغییر دهید.</p>
+    </div>
+    <div class="card">
+      <h2>حریم خصوصی</h2>
+      <ul class="bullets">
+        <li>هیچ داده‌ای از صفحات شما خوانده، ذخیره یا ارسال نمی‌شود.</li>
+        <li>هیچ درخواست شبکه‌ای انجام نمی‌شود؛ فونت‌ها همراه خود افزونه هستند.</li>
+        <li>تنها ذخیره‌سازی، تنظیمات شما در <code>storage.local</code> مرورگر است.</li>
+        <li>هیچ هدر امنیتی سایت (CSP) دست‌کاری نمی‌شود.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script src="../core/bidi.js"></script>
+<script src="../core/sites.js"></script>
+<script src="../core/settings.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

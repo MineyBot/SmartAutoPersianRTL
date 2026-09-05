@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Persian Web Mixer</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M20 6H8M20 12H11M20 18H4" />
+        </svg>
+      </span>
+      <div class="brand-text">
+        <strong>Persian Web Mixer</strong>
+        <small id="site-label">…</small>
+      </div>
+    </div>
+    <label class="sw" title="کلید اصلی افزونه">
+      <input type="checkbox" id="master" />
+      <span class="track"><span class="knob"></span></span>
+    </label>
+  </header>
+
+  <div id="alert" class="alert" hidden></div>
+
+  <section class="row site-row">
+    <div class="row-main">
+      <span class="row-title">این سایت</span>
+      <span class="row-sub" id="site-state">در حال بررسی…</span>
+    </div>
+    <label class="sw sm" title="روشن/خاموش فقط برای دامنه‌ی فعلی">
+      <input type="checkbox" id="site" />
+      <span class="track"><span class="knob"></span></span>
+    </label>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <span class="label">حالت تشخیص</span>
+      <span class="hint" id="mode-hint">—</span>
+    </div>
+    <div class="seg" role="tablist" id="mode">
+      <button role="tab" data-mode="smart">هوشمند</button>
+      <button role="tab" data-mode="auto">خودکار</button>
+      <button role="tab" data-mode="force">سخت‌گیر</button>
+    </div>
+    <div class="slider-row" id="threshold-row">
+      <span class="mini">آستانه‌ی فارسی</span>
+      <input type="range" id="threshold" min="5" max="100" step="5" />
+      <output id="threshold-out">۳۰٪</output>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <span class="label">فونت</span>
+      <label class="sw xs" title="اعمال فونت"><input type="checkbox" id="font-on" /><span class="track"><span class="knob"></span></span></label>
+    </div>
+    <div class="chips" id="font-chips"></div>
+    <div class="font-actions">
+      <label class="btn ghost" for="font-file">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 15V3m0 0L8 7m4-4 4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        فونت دلخواه
+      </label>
+      <input type="file" id="font-file" accept=".woff2,.woff,.ttf,.otf" hidden />
+      <button class="btn danger" id="font-clear" hidden title="حذف فونت دلخواه">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
+      </button>
+    </div>
+    <div class="slider-row">
+      <span class="mini">اندازه</span>
+      <input type="range" id="scale" min="80" max="140" step="5" />
+      <output id="scale-out">۱۰۰٪</output>
+    </div>
+    <div class="preview" id="preview">
+      نمونه‌ی متن فارسی با ارقام ۱۲۳۴ و کلمه‌ی انگلیسی <span class="ltr">Sample</span>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head"><span class="label">تایپوگرافی</span></div>
+    <div class="toggles">
+      <label class="chk"><input type="checkbox" id="t-inputs" /><span>فیلدهای ورودی</span></label>
+      <label class="chk"><input type="checkbox" id="t-justify" /><span>هم‌تراز دوطرفه</span></label>
+      <label class="chk"><input type="checkbox" id="t-code" /><span>کد چپ‌چین</span></label>
+      <label class="chk"><input type="checkbox" id="t-shadow" /><span>نفوذ Shadow DOM</span></label>
+    </div>
+    <div class="slider-row">
+      <span class="mini">ارتفاع خط</span>
+      <input type="range" id="lh" min="0" max="26" step="1" />
+      <output id="lh-out">پیش‌فرض</output>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="stats" id="stats">—</div>
+    <div class="foot-actions">
+      <button class="btn ghost sm" id="rescan" title="پویش دوباره (Alt+Shift+P)">پویش</button>
+      <button class="btn ghost sm" id="options" title="تنظیمات پیشرفته">تنظیمات</button>
+    </div>
+  </footer>
+
+  <script src="../core/bidi.js"></script>
+  <script src="../core/sites.js"></script>
+  <script src="../core/settings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extName__",
+  "short_name": "PWM Pro",
+  "version": "4.0.0",
+  "default_locale": "fa",
+  "description": "__MSG_extDescription__",
+  "minimum_chrome_version": "111",
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "permissions": [
+    "storage",
+    "scripting",
+    "contextMenus"
+  ],
+
+  "host_permissions": ["<all_urls>"],
+
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "__MSG_actionTitle__",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
+
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/main-world/hook.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "src/core/bidi.js",
+        "src/core/sites.js",
+        "src/core/settings.js",
+        "src/core/css.js",
+        "src/content/engine.js",
+        "src/content/boot.js"
+      ],
+      "css": ["src/content/base.css"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+
+  "commands": {
+    "toggle-site": {
+      "suggested_key": { "default": "Alt+Shift+R" },
+      "description": "__MSG_cmdToggleSite__"
+    },
+    "toggle-global": {
+      "suggested_key": { "default": "Alt+Shift+E" },
+      "description": "__MSG_cmdToggleGlobal__"
+    },
+    "rescan": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "__MSG_cmdRescan__"
+    }
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["fonts/*", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

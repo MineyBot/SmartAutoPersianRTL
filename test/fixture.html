@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PWM fixture</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  pre { background: #eee; padding: 8px; }
+  .markdown { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+</style>
+</head>
+<body>
+
+<div id="chat">
+  <div data-message-author-role="user">
+    <div class="markdown"><p id="fa-user">سلام، لطفاً یک تابع مرتب‌سازی سریع برای من بنویس.</p></div>
+  </div>
+  <div data-message-author-role="assistant">
+    <div class="markdown">
+      <p id="fa-assist">حتماً! این پیاده‌سازی <span id="inline-en">quick sort</span> در پایتون است:</p>
+      <pre id="code-block"><code>def quicksort(arr):
+    if len(arr) &lt;= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    return quicksort([x for x in arr if x &lt; pivot]) + [x for x in arr if x == pivot] + quicksort([x for x in arr if x &gt; pivot])</code></pre>
+      <p id="en-para">This paragraph is written entirely in English and must remain left-to-right without any change.</p>
+      <ul>
+        <li id="fa-li1">ابتدا محور را انتخاب می‌کنیم</li>
+        <li id="fa-li2">سپس آرایه را به دو بخش تقسیم می‌کنیم</li>
+      </ul>
+      <blockquote id="fa-quote">پیچیدگی زمانی میانگین این الگوریتم برابر n log n است.</blockquote>
+      <table>
+        <tr><th id="fa-th">ردیف</th><th id="en-th">Complexity</th></tr>
+        <tr><td id="fa-td">اول</td><td id="en-td">O(n log n)</td></tr>
+      </table>
+      <p id="mixed-en">The Persian word سلام means hello, and this sentence is mostly English text overall.</p>
+      <p id="digits-only">۱۲۳۴۵ ۶۷۸۹</p>
+      <p id="emoji-only">🎉🚀✨</p>
+      <span class="katex" id="math-el">x^2 + بتا</span>
+      <div class="hljs" id="hljs-el">متن داخل بلوک کد نباید راست‌چین شود</div>
+    </div>
+  </div>
+</div>
+
+<h3 id="fa-h3">سرتیتر فارسی برای آزمون</h3>
+
+<textarea id="ta" placeholder="متن خود را بنویسید"></textarea>
+<input id="inp-text" type="text">
+<input id="inp-range" type="range">
+<input id="inp-checkbox" type="checkbox">
+<div id="ce" contenteditable="true">متن قابل ویرایش فارسی</div>
+<button id="btn">دکمه‌ی فارسی</button>
+
+<!-- Shadow DOM: open -->
+<div id="shadow-open"></div>
+<!-- Shadow DOM: closed (must be forced open by the MAIN-world hook) -->
+<div id="shadow-closed"></div>
+<!-- nested shadow -->
+<div id="shadow-nested"></div>
+
+<script>
+  const open = document.getElementById('shadow-open').attachShadow({ mode: 'open' });
+  open.innerHTML = '<p id="s-fa">متن فارسی داخل شدو دام باز</p><p id="s-en">English inside open shadow root here.</p>';
+
+  const closed = document.getElementById('shadow-closed').attachShadow({ mode: 'closed' });
+  closed.innerHTML = '<p id="c-fa">متن فارسی داخل شدو دام بسته</p>';
+  window.__closedRef = closed;
+
+  const outer = document.getElementById('shadow-nested').attachShadow({ mode: 'open' });
+  outer.innerHTML = '<div id="mid"></div>';
+  const inner = outer.getElementById('mid').attachShadow({ mode: 'open' });
+  inner.innerHTML = '<p id="n-fa">متن فارسی در شدو دام تودرتو</p>';
+  window.__nestedRef = inner;
+
+  // محتوای پویا: بعد از ۶۰۰ میلی‌ثانیه اضافه می‌شود (شبیه استریم چت‌بات)
+  setTimeout(() => {
+    const p = document.createElement('p');
+    p.id = 'streamed';
+    p.textContent = 'این پاراگراف پس از بارگذاری صفحه و به‌صورت پویا اضافه شد.';
+    document.querySelectorAll('.markdown')[1].appendChild(p);
+
+    const g = document.createElement('p');
+    g.id = 'grow';
+    g.textContent = 'Loading';
+    document.querySelectorAll('.markdown')[1].appendChild(g);
+    setTimeout(() => { g.textContent = 'اکنون این متن فارسی شده است و باید راست‌چین شود.'; }, 250);
+  }, 600);
+</script>
+</body>
+</html>
