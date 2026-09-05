@@ -416,6 +416,130 @@ const setRange = (pg, sel, val) => pg.evaluate(([s, v]) => {
     await sleep(1000);
     eq('پس از حذف قاعده، سایت دوباره فعال شد', await dirOf('#fa-assist'), 'rtl');
 
+    section('سلکتور دلخواه — از رابط کاربر تا صفحه');
+    /* آزمون سرتاسری: چیزی که کاربر در textarea می‌نویسد باید از storage عبور
+     * کند، به content script برسد و رفتار موتور را روی همان صفحه عوض کند. */
+    eq('پیش‌فرض: بلوک درونی علامت خورده', await dirOf('#cs-inner'), 'rtl');
+    eq('پیش‌فرض: ظرف بیرونی علامت نخورده', await dirOf('#cs-wrap'), null);
+    eq('پیش‌فرض: پاراگراف محافظ‌شدنی فعلاً rtl است', await dirOf('#cs-guard'), 'rtl');
+
+    await tap(opt, '#tabs button[data-tab="sites"]');
+    await sleep(200);
+    await opt.evaluate(() => {
+      document.getElementById('sel-host-new').value = '127.0.0.1';
+      const a = document.getElementById('sel-anchors');
+      const g = document.getElementById('sel-guards');
+      a.value = '.cs-wrap';
+      g.value = '.cs-no';
+      a.dispatchEvent(new Event('input', { bubbles: true }));
+      g.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const okReport = await opt.evaluate(() => {
+      const r = document.getElementById('sel-report');
+      return { hidden: r.hidden, cls: r.className, text: r.textContent.trim().slice(0, 40) };
+    });
+    ok('بازخورد زنده می‌گوید سلکتورها معتبرند', !okReport.hidden && /ok/.test(okReport.cls), JSON.stringify(okReport));
+
+    await tap(opt, '#sel-save');
+    await sleep(1200);
+
+    eq('لنگر دلخواه: ظرف بیرونی علامت خورد', await dirOf('#cs-wrap'), 'rtl');
+    eq('لنگر دلخواه: بلوک درونی رها شد', await dirOf('#cs-inner'), null);
+    eq('محافظ دلخواه: پاراگراف کنار گذاشته شد', await dirOf('#cs-guard'), null);
+    eq('بقیه‌ی صفحه دست‌نخورده ماند', await dirOf('#fa-assist'), 'rtl');
+
+    /* سلکتور نامعتبر باید در رابط کاربر علامت‌گذاری و در ذخیره‌سازی حذف شود */
+    await opt.evaluate(() => {
+      const a = document.getElementById('sel-anchors');
+      a.value = '.cs-wrap\n.evil{color:red}\n<script>';
+      a.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const badReport = await opt.evaluate(() => {
+      const r = document.getElementById('sel-report');
+      return { hidden: r.hidden, cls: r.className, text: r.textContent };
+    });
+    ok('بازخورد زنده سلکتور نامعتبر را گزارش می‌کند', !badReport.hidden && /bad/.test(badReport.cls), JSON.stringify(badReport).slice(0, 120));
+    ok('و تعداد نامعتبرها را می‌شمارد', /۲/.test(badReport.text), badReport.text.slice(0, 60));
+
+    await tap(opt, '#sel-save');
+    await sleep(1000);
+    const savedSel = await opt.evaluate(() => PWM.Settings.load().then((s) => {
+      const site = (s.sites || {})['127.0.0.1'] || {};
+      return { anchors: site.anchors || [], guards: site.guards || [] };
+    }));
+    eq('فقط سلکتور معتبر ذخیره شد', JSON.stringify(savedSel.anchors), JSON.stringify(['.cs-wrap']));
+
+    /* شمارشگر «آزمودن روی تب فعال» */
+    const testOut = await (async () => {
+      await tap(opt, '#sel-test');
+      await sleep(1400);
+      return opt.evaluate(() => {
+        const o = document.getElementById('sel-test-out');
+        return { hidden: o.hidden, text: o.textContent.replace(/\s+/g, ' ').trim().slice(0, 120) };
+      });
+    })();
+    ok('آزمودن سلکتور روی تب فعال نتیجه می‌دهد', !testOut.hidden && /127\.0\.0\.1/.test(testOut.text), JSON.stringify(testOut));
+    ok('و تعداد موارد پیداشده را نشان می‌دهد', /مورد/.test(testOut.text), testOut.text);
+
+    /* پاک‌کردن سلکتورها باید صفحه را به حالت پیش‌فرض برگرداند */
+    await opt.evaluate(() => {
+      document.getElementById('sel-anchors').value = '';
+      document.getElementById('sel-guards').value = '';
+    });
+    await tap(opt, '#sel-save');
+    await sleep(1200);
+    eq('پس از پاک‌کردن، ظرف بیرونی رها شد', await dirOf('#cs-wrap'), null);
+    eq('و بلوک درونی برگشت', await dirOf('#cs-inner'), 'rtl');
+    eq('و پاراگراف محافظ‌شده هم برگشت', await dirOf('#cs-guard'), 'rtl');
+
+    section('همگام‌سازی تنظیمات');
+    /* تنظیمات باید در storage.sync بنشیند و فونت آپلودی در storage.local بماند */
+    await tap(opt, '#tabs button[data-tab="general"]');
+    await sleep(250);
+    const syncOn = await opt.evaluate(() => document.getElementById('sync-enabled').checked);
+    ok('همگام‌سازی به‌طور پیش‌فرض روشن است', syncOn === true, String(syncOn));
+
+    const areas = await opt.evaluate(() => new Promise((res) => {
+      chrome.storage.sync.get(['pwm'], (s) => {
+        chrome.storage.local.get(['pwm', 'pwmLocal'], (l) => {
+          res({
+            syncHasSettings: !!(s.pwm && s.pwm.version),
+            syncHasFont: !!(s.pwm && s.pwm.font && s.pwm.font.customData),
+            localHasHeavyKey: Object.prototype.hasOwnProperty.call(l, 'pwmLocal'),
+            syncMode: s.pwm ? s.pwm.mode : null
+          });
+        });
+      });
+    }));
+    ok('تنظیمات در storage.sync نوشته شده', areas.syncHasSettings, JSON.stringify(areas));
+    ok('فونت آپلودی در sync نیست', !areas.syncHasFont, JSON.stringify(areas));
+    ok('کلید محلی جدا ساخته شده', areas.localHasHeavyKey, JSON.stringify(areas));
+
+    /* تغییری که در sync نوشته شود باید بی‌واسطه به صفحه برسد — همان مسیری که
+     * روی یک دستگاه دیگر طی می‌شود. */
+    await opt.evaluate(() => new Promise((res) => {
+      chrome.storage.sync.get(['pwm'], (r) => {
+        const next = Object.assign({}, r.pwm, { mode: 'force' });
+        chrome.storage.sync.set({ pwm: next }, res);
+      });
+    }));
+    await sleep(1400);
+    const optMode = await opt.evaluate(() => document.querySelector('#mode input:checked').value);
+    eq('نوشتن در sync رابط کاربر را به‌روز می‌کند', optMode, 'force');
+    /* حالت force یعنی «هر متنی که حرف فارسی دارد» — پس پاراگراف مخلوط را
+     * می‌گیرد، نه پاراگراف تماماً انگلیسی. */
+    eq('و صفحه هم با حالت تازه رفتار می‌کند', await dirOf('#mixed-en'), 'rtl');
+
+    /* برگرداندن به حالت هوشمند تا آزمون‌های بعدی تحت تأثیر نمانند */
+    await opt.evaluate(() => new Promise((res) => {
+      chrome.storage.sync.get(['pwm'], (r) => {
+        chrome.storage.sync.set({ pwm: Object.assign({}, r.pwm, { mode: 'smart' }) }, res);
+      });
+    }));
+    await sleep(1200);
+    eq('بازگشت به حالت هوشمند', await dirOf('#mixed-en'), null);
+
     section('پاپ‌آپ');
     const pop = await browser.newPage();
     const popErrs = [];
@@ -440,6 +564,13 @@ const setRange = (pg, sel, val) => pg.evaluate(([s, v]) => {
 
     /* --------------------------------------------- زبانه‌های صفحه‌ی تنظیمات */
     section('زبانه‌های صفحه‌ی تنظیمات');
+    /* صفحه را تازه بارگذاری می‌کنیم: در اجرای طولانی، Edge تبِ بی‌فوکوس تنظیمات
+     * را دور می‌اندازد و ارزیابی بعدی با «Execution context was destroyed»
+     * می‌شکند. این بخش هم به وضعیت قبلی نیازی ندارد. */
+    await opt.goto('chrome-extension://' + extId + '/src/options/options.html', { waitUntil: 'load' });
+    await opt.waitForSelector('#tabs button', { timeout: 10000 });
+    await sleep(400);
+
     /* [hidden] در استایل‌شیت پیش‌فرض مرورگر فقط display:none است و هر قاعده‌ی
      * نویسنده (مثل .pane{display:flex}) آن را می‌شکند؛ نتیجه این می‌شود که همه‌ی
      * زبانه‌ها زیر هم رندر می‌شوند و کلیک روی تب‌ها هیچ اثری ندارد. */
@@ -503,10 +634,23 @@ const setRange = (pg, sel, val) => pg.evaluate(([s, v]) => {
     ok('پردازش زیر ۸ ثانیه انجام شد', dt < 8000, dt + 'ms');
     console.log('    زمان: ' + dt + 'ms برای ' + bulk + ' بلوک');
 
+    /* شمارش فریم: requestAnimationFrame در تبِ پنهان/بی‌فوکوس throttle یا کاملاً
+     * متوقف می‌شود و آن‌وقت این Promise هرگز resolve نمی‌شود و کل اجرا با
+     * «Runtime.callFunctionOn timed out» می‌افتد. پس اول تب را جلو می‌آوریم و
+     * یک مهلت سخت هم می‌گذاریم تا در بدترین حالت صفر برگردد نه اینکه معلق بماند. */
+    await big.bringToFront().catch(() => {});
     const frames = await big.evaluate(() => new Promise((res) => {
       let n = 0;
       const t = performance.now();
-      const loop = () => { n++; if (performance.now() - t < 1000) requestAnimationFrame(loop); else res(n); };
+      const hardStop = setTimeout(() => res(n), 2500);
+      const loop = () => {
+        n++;
+        if (performance.now() - t < 1000) requestAnimationFrame(loop);
+        else {
+          clearTimeout(hardStop);
+          res(n);
+        }
+      };
       requestAnimationFrame(loop);
     }));
     ok('صفحه پس از پردازش روان مانده', frames > 20, frames + ' فریم در ثانیه');

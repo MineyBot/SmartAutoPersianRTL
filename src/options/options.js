@@ -72,6 +72,7 @@
     if (!S) return;
 
     $('#enabled').checked = S.enabled;
+    $('#sync-enabled').checked = S.syncEnabled;
     var sc = document.querySelector('#scope input[value="' + S.scope + '"]');
     if (sc) sc.checked = true;
     var md = document.querySelector('#mode input[value="' + S.mode + '"]');
@@ -124,6 +125,8 @@
     setRange('#budget', S.adv.budgetMs, fa);
 
     renderSites();
+    renderSelectorEditor();
+    renderSyncState();
     runLab();
   }
 
@@ -379,7 +382,8 @@
     ['#openClosed', 'adv.openClosedShadow'],
     ['#badge', 'adv.badge'],
     ['#debug', 'adv.debug'],
-    ['#mirror', 'adv.mirrorLayout']
+    ['#mirror', 'adv.mirrorLayout'],
+    ['#sync-enabled', 'syncEnabled']
   ].forEach(function (pair) {
     var node = $(pair[0]);
     if (!node) return;
@@ -416,6 +420,254 @@
     });
     r.addEventListener('change', function () {
       commit(deltaFn(+r.value), true);
+    });
+  }
+
+  /* ------------------------------------------------- custom selector editor */
+
+  /** دامنه‌ی انتخاب‌شده در ویرایشگر سلکتور */
+  function selHost() {
+    var typed = ($('#sel-host-new').value || '').trim();
+    if (typed) {
+      return Sites.normalizeHost(typed.replace(/^https?:\/\//, '').split('/')[0]);
+    }
+    return $('#sel-host').value || '';
+  }
+
+  function renderSelectorEditor() {
+    var sel = $('#sel-host');
+    if (!sel) return;
+    var prev = sel.value;
+
+    /* گزینه‌ها: هر دامنه‌ای که تنظیم اختصاصی دارد + پروفایل‌های آماده */
+    var hosts = Object.keys(S.sites || {});
+    Sites.PROFILES.forEach(function (p) {
+      (p.hosts || []).forEach(function (h) {
+        if (hosts.indexOf(h) < 0) hosts.push(h);
+      });
+    });
+    hosts.sort();
+
+    sel.innerHTML =
+      '<option value="">— دامنه را انتخاب کنید —</option>' +
+      hosts
+        .map(function (h) {
+          var ov = (S.sites || {})[h];
+          var n = ov ? (ov.anchors || []).length + (ov.guards || []).length : 0;
+          return '<option value="' + h + '">' + h + (n ? ' (' + fa(n) + ' سلکتور)' : '') + '</option>';
+        })
+        .join('');
+    if (prev && hosts.indexOf(prev) >= 0) sel.value = prev;
+
+    fillSelectorFields();
+  }
+
+  function fillSelectorFields() {
+    var h = $('#sel-host').value;
+    var ov = (S.sites || {})[h] || {};
+    $('#sel-anchors').value = (ov.anchors || []).join('\n');
+    $('#sel-guards').value = (ov.guards || []).join('\n');
+    $('#sel-report').hidden = true;
+    $('#sel-test-out').hidden = true;
+  }
+
+  /** بازخورد زنده: کدام خط‌ها معتبرند و کدام رد شدند */
+  function reportSelectors() {
+    var box = $('#sel-report');
+    var lines = []
+      .concat(($('#sel-anchors').value || '').split('\n').map(function (s) { return ['لنگر', s]; }))
+      .concat(($('#sel-guards').value || '').split('\n').map(function (s) { return ['محافظ', s]; }))
+      .filter(function (p) {
+        return p[1].trim();
+      });
+    if (!lines.length) {
+      box.hidden = true;
+      return;
+    }
+    var bad = lines.filter(function (p) {
+      return !Settings.isSafeSelector(p[1]);
+    });
+    if (!bad.length) {
+      box.className = 'sel-report ok';
+      box.textContent = 'همه‌ی ' + fa(lines.length) + ' سلکتور معتبرند.';
+    } else {
+      box.className = 'sel-report bad';
+      box.innerHTML =
+        '<b>' + fa(bad.length) + ' سلکتور نامعتبر و نادیده گرفته می‌شود:</b><ul>' +
+        bad
+          .map(function (p) {
+            return '<li>' + p[0] + ': <code dir="ltr">' + esc(p[1].trim().slice(0, 60)) + '</code></li>';
+          })
+          .join('') +
+        '</ul>';
+    }
+    box.hidden = false;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  $('#sel-host').addEventListener('change', function () {
+    $('#sel-host-new').value = '';
+    fillSelectorFields();
+  });
+  $('#sel-anchors').addEventListener('input', reportSelectors);
+  $('#sel-guards').addEventListener('input', reportSelectors);
+
+  $('#sel-save').addEventListener('click', function () {
+    var h = selHost();
+    if (!h || h.indexOf('.') < 0) {
+      toast('اول یک دامنه‌ی معتبر انتخاب یا وارد کنید.', true);
+      return;
+    }
+    var anchors = Settings.sanitizeSelectorList($('#sel-anchors').value);
+    var guards = Settings.sanitizeSelectorList($('#sel-guards').value);
+
+    /* برای پاک‌کردن سلکتورها باید صریح آرایه‌ی خالی نوشته شود، چون deepMerge
+     * کلید غایب را دست‌نخورده رد می‌کند. */
+    var next = Settings.deepMerge(S, {});
+    next.sites = next.sites || {};
+    var cur = next.sites[h] || {};
+    cur.anchors = anchors;
+    cur.guards = guards;
+    if (cur.enabled === undefined && !anchors.length && !guards.length) delete next.sites[h];
+    else next.sites[h] = cur;
+
+    writing = true;
+    Settings.save(next)
+      .then(function (n) {
+        S = n;
+        render();
+        $('#sel-host').value = h;
+        fillSelectorFields();
+        var saved = ((n.sites[h] || {}).anchors || []).length + ((n.sites[h] || {}).guards || []).length;
+        toast(saved ? fa(saved) + ' سلکتور برای ' + h + ' ذخیره شد' : 'سلکتورهای ' + h + ' پاک شد');
+      })
+      .then(function () {
+        writing = false;
+      });
+  });
+
+  $('#sel-clear').addEventListener('click', function () {
+    $('#sel-anchors').value = '';
+    $('#sel-guards').value = '';
+    reportSelectors();
+  });
+
+  /** سلکتورها را روی یک تب واقعی می‌شمارد تا کاربر قبل از ذخیره بداند چیزی می‌گیرند یا نه */
+  $('#sel-test').addEventListener('click', function () {
+    var anchors = Settings.sanitizeSelectorList($('#sel-anchors').value);
+    var guards = Settings.sanitizeSelectorList($('#sel-guards').value);
+    if (!anchors.length && !guards.length) {
+      toast('چیزی برای آزمودن نیست.', true);
+      return;
+    }
+    var out = $('#sel-test-out');
+    out.hidden = false;
+    out.className = 'sel-test-out';
+    out.textContent = 'در حال شمارش…';
+
+    var want = selHost();
+
+    /* صفحه‌ی تنظیمات خودش تبِ فعال است، پس جست‌وجوی {active:true} فقط همین صفحه
+     * را برمی‌گرداند و هیچ‌وقت جواب نمی‌دهد. همه‌ی تب‌ها را می‌گیریم، اول تبی را
+     * ترجیح می‌دهیم که دامنه‌اش با دامنه‌ی انتخاب‌شده یکی است، بعد تازه‌ترین تب. */
+    chrome.tabs.query({}, function (tabs) {
+      var cands = (tabs || []).filter(function (t) {
+        return t && t.id && /^https?:/.test(t.url || '');
+      });
+      if (!cands.length) {
+        out.className = 'sel-test-out bad';
+        out.textContent = 'هیچ تبی با یک صفحه‌ی وب معمولی باز نیست. سایت را در تبی دیگر باز کنید و دوباره بزنید.';
+        return;
+      }
+      var hostOf = function (t) {
+        try {
+          return Sites.normalizeHost(new URL(t.url).hostname);
+        } catch (e) {
+          return '';
+        }
+      };
+      var matching = want ? cands.filter(function (t) { return hostOf(t) === want; }) : [];
+      var pool = matching.length ? matching : cands;
+      pool.sort(function (a, b) {
+        return (b.lastAccessed || 0) - (a.lastAccessed || 0);
+      });
+      var tab = pool[0];
+
+      chrome.scripting.executeScript(
+        {
+          target: { tabId: tab.id, allFrames: false },
+          args: [anchors, guards],
+          func: function (an, gu) {
+            function count(list) {
+              return list.map(function (s) {
+                var n = 0;
+                try {
+                  n = document.querySelectorAll(s).length;
+                } catch (e) {
+                  n = -1;
+                }
+                return { sel: s, n: n };
+              });
+            }
+            return { host: location.hostname, anchors: count(an), guards: count(gu) };
+          }
+        },
+        function (res) {
+          var err = chrome.runtime.lastError;
+          if (err || !res || !res[0]) {
+            out.className = 'sel-test-out bad';
+            out.textContent = 'اجرا در این تب ممکن نبود' + (err ? ': ' + err.message : '.');
+            return;
+          }
+          var r = res[0].result;
+          var rows = function (arr) {
+            return arr
+              .map(function (x) {
+                var badge =
+                  x.n < 0 ? '<b class="bad">نامعتبر</b>'
+                  : x.n === 0 ? '<b class="warn">۰ مورد</b>'
+                  : '<b class="ok">' + fa(x.n) + ' مورد</b>';
+                return '<div><code dir="ltr">' + esc(x.sel) + '</code>' + badge + '</div>';
+              })
+              .join('');
+          };
+          var mismatch = want && Sites.normalizeHost(r.host) !== want;
+          out.className = 'sel-test-out';
+          out.innerHTML =
+            '<div class="t-head">روی <code dir="ltr">' + esc(r.host) + '</code>' +
+            (mismatch ? ' <b class="warn">(دامنه‌ی انتخاب‌شده باز نیست)</b>' : '') +
+            '</div>' +
+            (r.anchors.length ? '<div class="t-group"><span>لنگرها</span>' + rows(r.anchors) + '</div>' : '') +
+            (r.guards.length ? '<div class="t-group"><span>محافظ‌ها</span>' + rows(r.guards) + '</div>' : '');
+        }
+      );
+    });
+  });
+
+  /* ------------------------------------------------------------ sync status */
+  function renderSyncState() {
+    var box = $('#sync-state');
+    if (!box) return;
+    if (!S.syncEnabled) {
+      box.className = 'sync-state off';
+      box.textContent = 'همگام‌سازی خاموش است — تنظیمات فقط روی این دستگاه ذخیره می‌شود.';
+      return;
+    }
+    Settings.syncAvailable().then(function (ok) {
+      if (ok) {
+        box.className = 'sync-state on';
+        box.textContent = 'همگام‌سازی فعال است. تنظیمات روی دستگاه‌های دیگرِ همین حساب هم اعمال می‌شود.';
+      } else {
+        box.className = 'sync-state warn';
+        box.textContent =
+          'همگام‌سازی روشن است ولی مرورگر آن را در دسترس قرار نمی‌دهد (احتمالاً وارد حساب نشده‌اید). ' +
+          'تنظیمات فعلاً محلی ذخیره می‌شود و به‌محض ورود به حساب همگام می‌شود.';
+      }
     });
   }
 

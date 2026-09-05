@@ -10,7 +10,7 @@ Detects Persian/Arabic text on any page and right-aligns **only that text**.<br>
 Your code blocks, math, icons, buttons and the site's own layout stay exactly as they were.
 
 [![Manifest V3](https://img.shields.io/badge/manifest-V3-6366f1?style=flat-square)](manifest.json)
-[![Tests](https://img.shields.io/badge/tests-122_unit_+_97_browser-22c55e?style=flat-square)](test/)
+[![Tests](https://img.shields.io/badge/tests-169_unit_+_120_browser-22c55e?style=flat-square)](test/)
 [![Network requests](https://img.shields.io/badge/network_requests-zero-0ea5e9?style=flat-square)](#privacy-and-permissions)
 [![Size](https://img.shields.io/badge/download-452_KB-a855f7?style=flat-square)](../../releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-64748b?style=flat-square)](LICENSE)
@@ -98,6 +98,23 @@ Line height, letter/word/paragraph spacing, justification, list indent, blockquo
 
 Switch any domain on or off on its own, or give it a different mode and font. Three scopes decide the default: every site, known sites only, or AI chatbots only.
 
+### Custom selectors — teach it any site
+
+The 27 profiles cover the sites people use most, but the web is bigger than any list. Settings → Sites lets you add your own selectors per domain:
+
+| Field | Meaning |
+|---|---|
+| **Anchors** | treat these elements as text blocks — use it when a site wraps messages in a `<div>` the generic list doesn't reach |
+| **Guards** | never touch these — use it for charts, custom code viewers, icon fonts |
+
+Turn on Debug mode first and the engine outlines what it selected, so you can read the class off the page and paste it in. Guards win over anchors, invalid selectors are rejected before they're saved (with a live report telling you which line failed), and **Test on active tab** counts how many elements each selector actually matches before you commit. Changes apply to open pages immediately — no reload.
+
+<div align="center"><img src="docs/selectors.png" width="620" alt="The custom selector editor: a domain picker, an anchors textarea holding .message-body and article .content, a guards textarea holding .sidebar and .chart-container, a green line confirming all 4 selectors are valid, and buttons to save, test on the active tab, or clear."></div>
+
+### Settings that follow you
+
+Settings live in `storage.sync`, so anything you configure on one machine shows up on every other browser signed into the same account. An uploaded font stays local — it's around 145 KB and the per-item sync quota is 8 KB. If sync isn't available (not signed in, quota full), it silently falls back to local storage instead of losing your settings, and the Settings page tells you which state you're in.
+
 ### Shortcuts and quick access
 
 | Shortcut | Action |
@@ -115,7 +132,7 @@ Remap at `chrome://extensions/shortcuts`. There's a right-click menu too, and th
 - **Zero network requests.** Fonts ship inside the extension; nothing is fetched at runtime, ever.
 - **Nothing leaves your browser.** No telemetry, no analytics, no page content read out or logged.
 - **Your site's security is untouched.** No `declarativeNetRequest`, no header rewriting. (Details in [design decision 3](#fonts).)
-- The only thing stored is your own settings, in `storage.local`.
+- The only thing stored is your own settings — in `storage.sync` so they follow your browser account, with an uploaded font kept in `storage.local` because it exceeds the sync quota. Either way, it stays inside your browser.
 
 | Permission | Why |
 |---|---|
@@ -132,7 +149,7 @@ Remap at `chrome://extensions/shortcuts`. There's a right-click menu too, and th
 src/core/            pure logic — no chrome.*, no DOM at load time
   bidi.js            direction detection by strong-character counting
   sites.js           27 site profiles: anchors, guards, input selectors
-  settings.js        schema, validation, v3→v4 migration, per-domain config
+  settings.js        schema, validation, v3→v5 migration, per-domain config
   css.js             stylesheet generation + Constructable Stylesheet injection
 src/content/
   engine.js          incremental DOM walk, marking, Shadow DOM management
@@ -176,9 +193,9 @@ Only the subtree of changed nodes is queued. Work runs in `budgetMs` slices that
 ```bash
 npm install           # jsdom + puppeteer-core, dev only
 
-npm test              # 122 unit tests — logic + jsdom, no browser needed
-npm run test:browser  # 97 integration tests — loads the real extension
-npm run pack          # → dist/persian-web-mixer-v4.0.0.zip
+npm test              # 169 unit tests — logic + jsdom, no browser needed
+npm run test:browser  # 120 integration tests — loads the real extension
+npm run pack          # → dist/persian-web-mixer-v4.1.0.zip
 node tools/shots.js   # regenerate docs/*.png
 ```
 

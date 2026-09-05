@@ -82,9 +82,10 @@
 
   /* ------------------------------------------------------------ lifecycle */
 
-  Engine.prototype.start = function (cfg, profile) {
-    this.cfg = cfg;
-    this.profile = profile;
+  /** سلکتورهای لنگر/محافظ/ورودی را از پروفایل می‌سازد.
+   * هم start و هم update باید این را صدا بزنند: اگر فقط در start باشد، ذخیره‌ی
+   * سلکتور دلخواه روی صفحه‌ی باز هیچ اثری ندارد چون رشته‌های قدیمی می‌مانند. */
+  Engine.prototype._buildSelectors = function (profile) {
     this.guardSel = (profile.guards || [])
       .map(function (g) {
         return g.slice(-1) === '-' ? '[class*="' + g.slice(0, -1) + '"]' : g;
@@ -93,11 +94,21 @@
         return g && !/[{}]/.test(g);
       })
       .join(',');
-    this.anchorSel = (profile.anchors || []).join(',');
+    this.anchorSel = (profile.anchors || [])
+      .filter(function (a) {
+        return a && !/[{}]/.test(a);
+      })
+      .join(',');
     this.inputSel =
       'textarea, input:not([type]), input[type="text"], input[type="search"], input[type="email"],' +
       'input[type="url"], input[type="tel"], input[type="password"], [contenteditable="true"],' +
       '[contenteditable=""], [role="textbox"]';
+  };
+
+  Engine.prototype.start = function (cfg, profile) {
+    this.cfg = cfg;
+    this.profile = profile;
+    this._buildSelectors(profile);
 
     this.css = Css.build(cfg, profile);
     this.running = true;
@@ -176,7 +187,12 @@
   /** اعمال تنظیمات جدید بدون بارگذاری مجدد صفحه */
   Engine.prototype.update = function (cfg, profile) {
     this.cfg = cfg;
-    if (profile) this.profile = profile;
+    if (profile) {
+      this.profile = profile;
+      /* بدون این خط سلکتورهای دلخواه تازه‌ذخیره‌شده تا بارگذاری مجدد صفحه اثری
+       * ندارند — رشته‌های سلکتور فقط در start ساخته می‌شدند. */
+      this._buildSelectors(profile);
+    }
     Css.invalidate();
     this.css = Css.build(this.cfg, this.profile);
     var self = this;

@@ -50,6 +50,18 @@
     </div>
 
     <div class="card">
+      <div class="card-head">
+        <h2>همگام‌سازی بین دستگاه‌ها</h2>
+        <label class="sw"><input type="checkbox" id="sync-enabled" /><span class="track"><span class="knob"></span></span></label>
+      </div>
+      <p class="desc">
+        تنظیمات‌تان در حساب مرورگر ذخیره می‌شود، پس روی هر دستگاه دیگری که با همان حساب وارد شده‌اید
+        خودش می‌آید. فونت آپلودی همگام نمی‌شود؛ حجمش از سهمیه‌ی همگام‌سازی بیشتر است و همیشه محلی می‌ماند.
+      </p>
+      <div id="sync-state" class="sync-state"></div>
+    </div>
+
+    <div class="card">
       <h2>دامنه‌ی فعالیت</h2>
       <p class="desc">مشخص می‌کند افزونه در چه سایت‌هایی به‌طور پیش‌فرض کار کند. تصمیم‌های دستی هر سایت بر این تنظیم اولویت دارند.</p>
       <div class="radios" id="scope">
@@ -186,6 +198,48 @@
         <button class="btn ghost" id="site-add-off">افزودن (خاموش)</button>
       </div>
       <div id="site-list" class="site-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>سلکتور دلخواه</h2>
+      <p class="desc">
+        اگر سایتی درست کار نمی‌کند، خودتان به افزونه بگویید کجا را بگیرد و کجا را نگیرد.
+        <b>حالت اشکال‌زدایی</b> را در زبانه‌ی پیشرفته روشن کنید تا در کنسول ببینید موتور چه چیزی را انتخاب کرده،
+        بعد سلکتورش را اینجا بنویسید.
+      </p>
+
+      <div class="row-inline">
+        <select id="sel-host" aria-label="دامنه"></select>
+        <input type="text" id="sel-host-new" placeholder="یا دامنه‌ی تازه: example.com" dir="ltr" />
+      </div>
+
+      <div class="sel-grid">
+        <div>
+          <label for="sel-anchors">
+            <b>لنگرها</b> — این‌ها را متن بگیر
+          </label>
+          <textarea id="sel-anchors" dir="ltr" rows="4" spellcheck="false"
+                    placeholder=".message-body&#10;article .content&#10;[data-testid='tweetText']"></textarea>
+          <p class="hint">هر خط یک سلکتور. حداکثر ۲۰ مورد.</p>
+        </div>
+        <div>
+          <label for="sel-guards">
+            <b>محافظ‌ها</b> — به این‌ها دست نزن
+          </label>
+          <textarea id="sel-guards" dir="ltr" rows="4" spellcheck="false"
+                    placeholder=".sidebar&#10;pre&#10;.chart-container"></textarea>
+          <p class="hint">محافظ بر لنگر مقدم است.</p>
+        </div>
+      </div>
+
+      <div id="sel-report" class="sel-report" hidden></div>
+
+      <div class="row-inline">
+        <button class="btn" id="sel-save">ذخیره برای این دامنه</button>
+        <button class="btn ghost" id="sel-test">آزمودن روی تب فعال</button>
+        <button class="btn ghost" id="sel-clear">پاک‌کردن</button>
+      </div>
+      <div id="sel-test-out" class="sel-test-out" hidden></div>
     </div>
 
     <div class="card">

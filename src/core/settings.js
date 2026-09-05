@@ -8,8 +8,9 @@
   'use strict';
   var PWM = (root.PWM = root.PWM || {});
 
-  var SCHEMA_VERSION = 4;
+  var SCHEMA_VERSION = 5;
   var STORE_KEY = 'pwm';
+  var LOCAL_KEY = 'pwmLocal'; // فقط چیزهایی که در sync جا نمی‌شوند (فونت آپلودی)
 
   /* فونت‌های همراه افزونه (آفلاین، بدون درخواست شبکه) */
   var BUILTIN_FONTS = [
@@ -73,13 +74,26 @@
       badge: true // نمایش وضعیت روی آیکن افزونه
     },
 
-    /* ---- بازنویسی به‌ازای سایت ---- */
-    // 'example.com': { enabled: false } | { mode: 'force', font: {...} }
+    /* ---- بازنویسی به‌ازای سایت ----
+     * 'example.com': { enabled: false }
+     *              | { mode: 'force', font: {...} }
+     *              | { anchors: ['.msg'], guards: ['.chart'] }   ← سلکتور دلخواه
+     */
     sites: {},
+
+    /* ---- همگام‌سازی ----
+     * تنظیمات (~۷۰۰ بایت) در storage.sync ذخیره می‌شود، پس روی همه‌ی دستگاه‌هایی
+     * که با یک حساب وارد شده‌اند خودش می‌آید. فونت آپلودی همیشه محلی می‌ماند:
+     * حدود ۱۴۵ کیلوبایت است و سهمیه‌ی sync برای هر آیتم ۸ کیلوبایت.
+     */
+    syncEnabled: true,
 
     /* ---- آمار سبک ---- */
     stats: { applied: 0, lastHost: '', lastAt: 0 }
   };
+
+  /* کلیدهایی که هرگز sync نمی‌شوند (حجم‌شان از سهمیه بیشتر است) */
+  var LOCAL_ONLY = [['font', 'customData'], ['font', 'customName']];
 
   /* ------------------------------------------------------------------ utils */
   function isObj(v) {
@@ -106,6 +120,81 @@
 
   function oneOf(v, list, dflt) {
     return list.indexOf(v) >= 0 ? v : dflt;
+  }
+
+  /* --------------------------------------------------- سلکتورهای دلخواه سایت
+   * کاربر می‌تواند برای هر دامنه سلکتور اضافه کند: «این را لنگر بگیر» یا «به این
+   * دست نزن». چون این رشته‌ها مستقیم در CSS و querySelector می‌روند، باید
+   * سخت‌گیرانه اعتبارسنجی شوند، وگرنه یک `}` سادهٔ اشتباهی کل استایل‌شیت را
+   * می‌شکند و یک سلکتور نامعتبر هر `matches()` را throw می‌کند.
+   * -------------------------------------------------------------------------*/
+  var MAX_SELECTORS = 20;
+  var MAX_SELECTOR_LEN = 160;
+
+  /** آیا این رشته یک سلکتور CSS بی‌خطر و معتبر است؟ */
+  function isSafeSelector(sel) {
+    if (typeof sel !== 'string') return false;
+    var s = sel.trim();
+    if (!s || s.length > MAX_SELECTOR_LEN) return false;
+    /* نویسه‌هایی که می‌توانند از سلکتور بیرون بزنند و به قاعده/اسکریپت تبدیل شوند.
+     * توجه: `>` مجاز است — ترکیب‌کننده‌ی فرزند در CSS است. فقط `<` خطر دارد. */
+    if (/[{}<;@\\]/.test(s)) return false;
+    if (/\/\*|\*\//.test(s)) return false;
+    // سلکتورهایی که کل صفحه را می‌گیرند بی‌معنا و خطرناک‌اند
+    if (s === '*' || s === 'html' || s === 'body' || s === ':root') return false;
+    // اعتبار نهایی را به خود مرورگر می‌سپاریم
+    if (typeof document !== 'undefined' && document.createDocumentFragment) {
+      try {
+        document.createDocumentFragment().querySelector(s);
+      } catch (e) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** پاک‌سازی یک فهرست سلکتور: حذف نامعتبرها، یکتاسازی، محدودکردن تعداد */
+  function sanitizeSelectorList(list) {
+    if (typeof list === 'string') {
+      list = list.split(/[\n,]+/);
+    }
+    if (!Array.isArray(list)) return [];
+    var out = [];
+    for (var i = 0; i < list.length && out.length < MAX_SELECTORS; i++) {
+      var s = String(list[i] == null ? '' : list[i]).trim();
+      if (!s || out.indexOf(s) >= 0) continue;
+      if (isSafeSelector(s)) out.push(s);
+    }
+    return out;
+  }
+
+  /** بازنویسی یک سایت را پاک‌سازی می‌کند (فقط کلیدهای مجاز باقی می‌مانند) */
+  function sanitizeSiteOverride(ov) {
+    if (!isObj(ov)) return null;
+    var out = {};
+    if (typeof ov.enabled === 'boolean') out.enabled = ov.enabled;
+    if (ov.mode !== undefined) out.mode = oneOf(ov.mode, ['smart', 'auto', 'force'], 'smart');
+    if (ov.threshold !== undefined) out.threshold = clamp(ov.threshold, 0.05, 1, 0.3);
+    if (isObj(ov.font)) {
+      var f = {};
+      if (typeof ov.font.enabled === 'boolean') f.enabled = ov.font.enabled;
+      if (ov.font.scale !== undefined) f.scale = clamp(ov.font.scale, 70, 160, 100);
+      if (ov.font.builtin !== undefined) {
+        f.builtin = oneOf(ov.font.builtin, BUILTIN_FONTS.map(function (x) { return x.id; }), 'vazirmatn');
+      }
+      if (Object.keys(f).length) out.font = f;
+    }
+    if (isObj(ov.typo)) {
+      var t = {};
+      if (ov.typo.lineHeight !== undefined) t.lineHeight = clamp(ov.typo.lineHeight, 0, 3, 0);
+      if (typeof ov.typo.justify === 'boolean') t.justify = ov.typo.justify;
+      if (Object.keys(t).length) out.typo = t;
+    }
+    var an = sanitizeSelectorList(ov.anchors);
+    if (an.length) out.anchors = an;
+    var gu = sanitizeSelectorList(ov.guards);
+    if (gu.length) out.guards = gu;
+    return Object.keys(out).length ? out : null;
   }
 
   /** پاک‌سازی/محدودسازی مقادیر ورودی تا یک تنظیمِ معیوب کل صفحه را خراب نکند */
@@ -157,7 +246,23 @@
     s.adv.debug = !!s.adv.debug;
     s.adv.badge = !!s.adv.badge;
 
-    if (!isObj(s.sites)) s.sites = {};
+    s.syncEnabled = !!s.syncEnabled;
+
+    /* بازنویسی هر سایت جدا پاک‌سازی می‌شود؛ کلیدهای ناشناس و سلکتورهای نامعتبر
+     * حذف می‌شوند تا یک ورودی معیوب نتواند استایل کل صفحه را بشکند. */
+    if (!isObj(s.sites)) {
+      s.sites = {};
+    } else {
+      var clean = {};
+      for (var host in s.sites) {
+        if (!Object.prototype.hasOwnProperty.call(s.sites, host)) continue;
+        var h = String(host).toLowerCase().replace(/:\d+$/, '').replace(/^www\./, '');
+        if (!h || h.length > 120) continue;
+        var ov = sanitizeSiteOverride(s.sites[host]);
+        if (ov) clean[h] = ov;
+      }
+      s.sites = clean;
+    }
     return s;
   }
 
@@ -177,40 +282,159 @@
     return out;
   }
 
-  /* --------------------------------------------------------------- storage */
-  function load() {
+  /* ============================================================== storage
+   * تنظیمات در دو جا نگه داشته می‌شوند:
+   *   storage.sync  — همه‌ی تنظیمات جز فونت آپلودی (~۷۰۰ بایت، همگام میان دستگاه‌ها)
+   *   storage.local — فونت آپلودی (~۱۴۵ کیلوبایت؛ سهمیه‌ی هر آیتم sync ۸ کیلوبایت است)
+   * خواندن همیشه هر دو را می‌گیرد و روی هم می‌گذارد. اگر همگام‌سازی خاموش باشد
+   * یا در دسترس نباشد (مثلاً کاربر وارد حساب نشده)، مسیر محلی پشتیبان است.
+   * ==========================================================================*/
+
+  function area(name) {
+    try {
+      var a = chrome.storage[name];
+      return a && typeof a.get === 'function' ? a : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function areaGet(a, keys) {
     return new Promise(function (resolve) {
+      if (!a) return resolve({});
       try {
-        chrome.storage.local.get(
-          [STORE_KEY, 'rtlEnabled', 'fontEnabled', 'customFontBase64', 'customFontName'],
-          function (res) {
-            res = res || {};
-            var stored = res[STORE_KEY];
-            if (!stored && (res.rtlEnabled !== undefined || res.customFontBase64)) {
-              stored = migrate(res);
-            }
-            resolve(sanitize(stored));
-          }
-        );
+        a.get(keys, function (res) {
+          void chrome.runtime.lastError; // sync بدون ورود به حساب خطا می‌دهد
+          resolve(res || {});
+        });
       } catch (e) {
-        resolve(sanitize(null));
+        resolve({});
       }
+    });
+  }
+
+  function areaSet(a, payload) {
+    return new Promise(function (resolve, reject) {
+      if (!a) return reject(new Error('storage area unavailable'));
+      try {
+        a.set(payload, function () {
+          var err = chrome.runtime.lastError;
+          if (err) reject(new Error(err.message));
+          else resolve(true);
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  /** بخش‌های حجیم را از شیء جدا می‌کند: {sync, local} */
+  function split(s) {
+    var syncPart = JSON.parse(JSON.stringify(s));
+    var localPart = {};
+    for (var i = 0; i < LOCAL_ONLY.length; i++) {
+      var pathArr = LOCAL_ONLY[i];
+      var srcObj = syncPart;
+      var dstObj = localPart;
+      for (var k = 0; k < pathArr.length - 1; k++) {
+        if (!isObj(srcObj[pathArr[k]])) {
+          srcObj = null;
+          break;
+        }
+        srcObj = srcObj[pathArr[k]];
+        dstObj[pathArr[k]] = dstObj[pathArr[k]] || {};
+        dstObj = dstObj[pathArr[k]];
+      }
+      if (!srcObj) continue;
+      var leaf = pathArr[pathArr.length - 1];
+      if (srcObj[leaf] !== undefined && srcObj[leaf] !== '') dstObj[leaf] = srcObj[leaf];
+      delete srcObj[leaf];
+    }
+    return { sync: syncPart, local: localPart };
+  }
+
+  function load() {
+    var sync = area('sync');
+    var local = area('local');
+    return Promise.all([
+      areaGet(sync, [STORE_KEY]),
+      areaGet(local, [STORE_KEY, LOCAL_KEY, 'rtlEnabled', 'fontEnabled', 'customFontBase64', 'customFontName'])
+    ]).then(function (res) {
+      var fromSync = res[0][STORE_KEY] || null;
+      var fromLocal = res[1][STORE_KEY] || null;
+      var heavy = res[1][LOCAL_KEY] || null;
+
+      /* اولویت: تنظیمات همگام (اگر باشد) روی تنظیمات محلی. تنظیمات محلی برای
+       * ارتقا از نسخه‌ی ۴ لازم است، جایی که همه‌چیز در local بود. */
+      var base = fromSync || fromLocal;
+      if (!base && (res[1].rtlEnabled !== undefined || res[1].customFontBase64)) {
+        base = migrate(res[1]); // ارتقا از نسخه‌ی ۳
+      }
+      var merged = deepMerge(base || {}, heavy || {});
+      if (fromSync && fromLocal && !heavy) {
+        // نسخه‌ی ۴ فونت را داخل خود تنظیمات محلی داشت
+        if (fromLocal.font && fromLocal.font.customData) {
+          merged = deepMerge(merged, { font: { customData: fromLocal.font.customData, customName: fromLocal.font.customName } });
+        }
+      }
+      return sanitize(merged);
     });
   }
 
   function save(next) {
     var clean = sanitize(next);
-    return new Promise(function (resolve, reject) {
+    var parts = split(clean);
+    var sync = area('sync');
+    var local = area('local');
+
+    var writes = [];
+    var localPayload = {};
+    localPayload[LOCAL_KEY] = parts.local;
+
+    if (clean.syncEnabled && sync) {
+      var syncPayload = {};
+      syncPayload[STORE_KEY] = parts.sync;
+      writes.push(
+        areaSet(sync, syncPayload).catch(function (err) {
+          /* سهمیه پر شده یا کاربر وارد حساب نشده: بی‌صدا به مسیر محلی برمی‌گردیم
+           * تا تنظیمات کاربر گم نشود. */
+          localPayload[STORE_KEY] = parts.sync;
+          return null;
+        })
+      );
+    } else {
+      localPayload[STORE_KEY] = parts.sync;
+    }
+
+    return Promise.all(writes)
+      .then(function () {
+        return areaSet(local, localPayload);
+      })
+      .then(function () {
+        return clean;
+      });
+  }
+
+  /** آیا همگام‌سازی واقعاً در این مرورگر کار می‌کند؟ */
+  function syncAvailable() {
+    var sync = area('sync');
+    if (!sync) return Promise.resolve(false);
+    return new Promise(function (resolve) {
       try {
-        var payload = {};
-        payload[STORE_KEY] = clean;
-        chrome.storage.local.set(payload, function () {
+        sync.set({ pwmSyncProbe: 1 }, function () {
           var err = chrome.runtime.lastError;
-          if (err) reject(new Error(err.message));
-          else resolve(clean);
+          if (err) return resolve(false);
+          try {
+            sync.remove('pwmSyncProbe', function () {
+              void chrome.runtime.lastError;
+              resolve(true);
+            });
+          } catch (e) {
+            resolve(true);
+          }
         });
       } catch (e) {
-        reject(e);
+        resolve(false);
       }
     });
   }
@@ -232,9 +456,12 @@
   }
 
   function onChange(cb) {
-    var handler = function (changes, area) {
-      if (area !== 'local' || !changes[STORE_KEY]) return;
-      cb(sanitize(changes[STORE_KEY].newValue));
+    var handler = function (changes, changedArea) {
+      // هر دو ناحیه مهم‌اند: sync برای تنظیمات، local برای فونت آپلودی
+      if (changedArea !== 'local' && changedArea !== 'sync') return;
+      if (!changes[STORE_KEY] && !changes[LOCAL_KEY]) return;
+      // به‌جای استفاده از newValue، دوباره کامل می‌خوانیم تا دو ناحیه روی هم بیفتند
+      load().then(cb);
     };
     chrome.storage.onChanged.addListener(handler);
     return function () {
@@ -253,6 +480,21 @@
     var h = PWM.Sites ? PWM.Sites.normalizeHost(host) : String(host || '').toLowerCase();
     var override = (s.sites && (s.sites[h] || null)) || null;
     var cfg = override ? sanitize(deepMerge(s, override)) : s;
+
+    /* سلکتورهای دلخواه کاربر روی پروفایل سایت سوار می‌شوند.
+     * lockedGuards اول می‌آید: یک guard باید بتواند چیزی را که anchor گرفته پس
+     * بگیرد، پس ترتیب مهم است و موتور guard را مقدم می‌شمارد. */
+    if (override && (override.anchors || override.guards)) {
+      profile = deepMerge(profile, {});
+      if (override.anchors && override.anchors.length) {
+        profile.anchors = override.anchors.concat(profile.anchors || []);
+        profile.customAnchors = override.anchors.slice();
+      }
+      if (override.guards && override.guards.length) {
+        profile.guards = override.guards.concat(profile.guards || []);
+        profile.customGuards = override.guards.slice();
+      }
+    }
 
     var active = true;
     var reason = 'ok';
@@ -278,18 +520,25 @@
 
   PWM.Settings = {
     KEY: STORE_KEY,
+    LOCAL_KEY: LOCAL_KEY,
     VERSION: SCHEMA_VERSION,
     DEFAULTS: DEFAULTS,
     BUILTIN_FONTS: BUILTIN_FONTS,
     FALLBACK_STACK: FALLBACK_STACK,
+    MAX_SELECTORS: MAX_SELECTORS,
+    MAX_SELECTOR_LEN: MAX_SELECTOR_LEN,
     sanitize: sanitize,
     deepMerge: deepMerge,
     migrate: migrate,
+    isSafeSelector: isSafeSelector,
+    sanitizeSelectorList: sanitizeSelectorList,
+    sanitizeSiteOverride: sanitizeSiteOverride,
     load: load,
     save: save,
     patch: patch,
     patchSite: patchSite,
     onChange: onChange,
-    effective: effective
+    effective: effective,
+    syncAvailable: syncAvailable
   };
 })(typeof self !== 'undefined' ? self : globalThis);

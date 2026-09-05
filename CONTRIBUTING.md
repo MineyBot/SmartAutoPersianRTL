@@ -13,8 +13,8 @@ Load the folder as an unpacked extension (`chrome://extensions` → Developer mo
 ## Tests must pass before a PR
 
 ```bash
-npm test              # 122 unit tests — fast, no browser
-npm run test:browser  # 97 integration tests — loads the real extension
+npm test              # 169 unit tests — fast, no browser
+npm run test:browser  # 120 integration tests — loads the real extension
 ```
 
 The browser suite runs on **Edge** by default because Chrome ≥ 137 removed `--load-extension`. Override with `CHROME_PATH=/path/to/browser`.

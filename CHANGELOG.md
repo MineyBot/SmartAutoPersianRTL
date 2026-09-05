@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.1.0
+
+### Added
+
+- **Custom selectors per domain.** Settings → Sites now takes your own anchor and guard selectors for any site, so the extension is no longer limited to its 27 built-in profiles. Selectors are validated before they're saved (braces, `@`-rules, comments, `<`, and syntactically invalid patterns are rejected, capped at 20 per list, 160 chars each), guards take precedence over anchors, and **Test on active tab** counts real matches on a live page before you commit. Changes apply to already-open tabs without a reload.
+- **Settings sync across devices.** Settings moved to `storage.sync`, so they follow your browser account. An uploaded font (~145 KB) stays in `storage.local` because the per-item sync quota is 8 KB, and the two are recombined on read. If sync is unavailable — not signed in, quota exceeded — writes fall back to local storage silently rather than failing, and the Settings page reports which state you're in.
+
+### Fixed
+
+- **`Engine.update()` didn't rebuild its selector strings.** Anchor and guard selectors were only compiled in `start()`, so saving a custom selector had no effect on an open page until reload. The compile step is now shared by both paths.
+- Invalid anchor selectors are filtered in the engine as well as at save time, so a malformed pattern reaching the engine by any route can't break `matches()` for the whole page.
+
 ## 4.0.0
 
 Full rewrite. The old version was 988 lines; this one is ~3,900 in `src/`.
@@ -29,7 +41,7 @@ Full rewrite. The old version was 988 lines; this one is ~3,900 in `src/`.
 - Keyboard shortcuts, right-click menu, and a toolbar badge that greys out when disabled.
 - Debug mode that outlines every block the engine touched.
 - Two locales (`fa`, `en`) via `_locales`.
-- 122 unit tests and 97 browser integration tests; `tools/pack.js` builds a release zip, `tools/shots.js` regenerates the README screenshots.
+- 169 unit tests and 120 browser integration tests; `tools/pack.js` builds a release zip, `tools/shots.js` regenerates the README screenshots.
 
 ### Changed
 

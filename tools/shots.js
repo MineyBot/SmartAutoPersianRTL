@@ -124,6 +124,36 @@ function serve(dir) {
   await opt.screenshot({ path: path.join(OUT, 'lab.png'), fullPage: false });
   console.log('✓ docs/lab.png');
 
+  /* ویرایشگر سلکتور دلخواه: با محتوای نمونه پر می‌شود تا تصویر چیزی برای دیدن
+   * داشته باشد. نکته: clip در puppeteer مختصات *سند* را می‌خواهد نه viewport،
+   * پس باید scrollY را اضافه کنیم؛ وگرنه کارت بالاتر از صفحه بریده می‌شود. */
+  await opt.evaluate(() => document.querySelector('#tabs button[data-tab="sites"]').click());
+  await sleep(500);
+  await opt.setViewport({ width: 940, height: 1500, deviceScaleFactor: 2 });
+  await opt.evaluate(() => {
+    document.getElementById('sel-host-new').value = 'example.com';
+    const a = document.getElementById('sel-anchors');
+    const g = document.getElementById('sel-guards');
+    a.value = '.message-body\narticle .content';
+    g.value = '.sidebar\n.chart-container';
+    a.dispatchEvent(new Event('input', { bubbles: true }));
+    g.dispatchEvent(new Event('input', { bubbles: true }));
+    window.scrollTo(0, 0);
+  });
+  await sleep(800);
+  const selBox = await opt.evaluate(() => {
+    const c = document.getElementById('sel-host').closest('.card');
+    const r = c.getBoundingClientRect();
+    return {
+      x: Math.max(0, r.left + window.scrollX - 14),
+      y: Math.max(0, r.top + window.scrollY - 14),
+      width: r.width + 28,
+      height: r.height + 28
+    };
+  });
+  await opt.screenshot({ path: path.join(OUT, 'selectors.png'), clip: selBox, captureBeyondViewport: true });
+  console.log('✓ docs/selectors.png');
+
   await ext.close();
   srv.close();
   await sleep(400);

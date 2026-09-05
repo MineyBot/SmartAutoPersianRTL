@@ -116,7 +116,7 @@ function makeDom(html) {
       lastError: null,
       sendMessage: () => {},
       onMessage: { addListener: () => {} },
-      getManifest: () => ({ version: '4.0.0' })
+      getManifest: () => ({ version: '4.1.0' })
     },
     storage: {
       local: {
@@ -259,6 +259,83 @@ async function testEngine() {
 }
 
 /* ========================================================================
+ * ۲ب. سلکتورهای دلخواه، روی DOM واقعی
+ * یک <div> در فهرست لنگرهای عمومی نیست، پس بدون سلکتور دلخواه علامت نمی‌خورد.
+ * این تست ثابت می‌کند مسیر settings → effective → engine واقعاً وصل است، نه
+ * فقط این‌که آرایه‌ها درست ادغام می‌شوند.
+ * ======================================================================*/
+const CUSTOM_PAGE = `<!DOCTYPE html><html><body>
+<section id="wrap" class="my-msg"><div id="inner">این متن فارسی داخل یک بخش پیام است.</div></section>
+<p id="keep" class="no-touch">این پاراگراف باید دست‌نخورده بماند.</p>
+<p id="normal">این پاراگراف معمولی باید راست‌چین شود.</p>
+</body></html>`;
+
+async function testCustomSelectors() {
+  section('engine — سلکتورهای دلخواه روی DOM');
+
+  /* ۱) بدون سلکتور دلخواه: موتور نزدیک‌ترین بلوک را علامت می‌زند (#inner)،
+   *    نه ظرف بیرونی. */
+  let dom = makeDom(CUSTOM_PAGE);
+  let w = dom.window;
+  let St = w.PWM.Settings;
+  const base = St.effective(St.sanitize({ adv: { debounce: 0, budgetMs: 100 } }), 'example.com');
+  let eng = new w.PWM.Engine();
+  eng.start(base.cfg, base.profile);
+  await tick(w, 120);
+  eq('پیش‌فرض: بلوک درونی علامت می‌خورد', w.document.getElementById('inner').getAttribute('data-pwm-dir'), 'rtl');
+  eq('پیش‌فرض: ظرف بیرونی علامت نمی‌خورد', w.document.getElementById('wrap').getAttribute('data-pwm-dir'), null);
+  eng.stop();
+
+  /* ۲) با لنگر دلخواه، علامت به ظرف بیرونی منتقل می‌شود — همان چیزی که برای
+   *    پیام‌های چندتکه‌ی چت لازم است تا کل حباب یک جهت بگیرد. */
+  dom = makeDom(CUSTOM_PAGE);
+  w = dom.window;
+  St = w.PWM.Settings;
+  const withSel = St.sanitize({
+    adv: { debounce: 0, budgetMs: 100 },
+    sites: { 'example.com': { anchors: ['.my-msg'], guards: ['.no-touch'] } }
+  });
+  const effSel = St.effective(withSel, 'example.com');
+  eng = new w.PWM.Engine();
+  eng.start(effSel.cfg, effSel.profile);
+  await tick(w, 120);
+
+  eq('لنگر دلخواه: ظرف بیرونی علامت می‌خورد', w.document.getElementById('wrap').getAttribute('data-pwm-dir'), 'rtl');
+  eq('لنگر دلخواه: بلوک درونی دیگر علامت نمی‌خورد', w.document.getElementById('inner').getAttribute('data-pwm-dir'), null);
+  eq('محافظ دلخواه: پاراگراف کنار گذاشته می‌شود', w.document.getElementById('keep').getAttribute('data-pwm-dir'), null);
+  eq('پاراگراف بی‌ربط همچنان rtl است', w.document.getElementById('normal').getAttribute('data-pwm-dir'), 'rtl');
+
+  /* ۳) محافظ بر لنگر مقدم است، حتی اگر هر دو یک عنصر را بگیرند */
+  const clash = St.sanitize({
+    adv: { debounce: 0, budgetMs: 100 },
+    sites: { 'example.com': { anchors: ['.no-touch'], guards: ['.no-touch'] } }
+  });
+  const effClash = St.effective(clash, 'example.com');
+  const dom2 = makeDom(CUSTOM_PAGE);
+  const w2 = dom2.window;
+  const eng2 = new w2.PWM.Engine();
+  eng2.start(effClash.cfg, effClash.profile);
+  await tick(w2, 120);
+  eq('تضاد لنگر/محافظ: محافظ برنده است', w2.document.getElementById('keep').getAttribute('data-pwm-dir'), null);
+  eng2.stop();
+
+  /* ۴) سلکتور نامعتبری که به‌هر‌دلیل تا موتور برسد نباید چیزی را بشکند */
+  const dom3 = makeDom(CUSTOM_PAGE);
+  const w3 = dom3.window;
+  const bad = w3.PWM.Settings.effective(w3.PWM.Settings.sanitize({ adv: { debounce: 0, budgetMs: 100 } }), 'example.com');
+  bad.profile.anchors = ['.a >>> .b'].concat(bad.profile.anchors);
+  const eng3 = new w3.PWM.Engine();
+  eng3.start(bad.cfg, bad.profile);
+  await tick(w3, 120);
+  eq('سلکتور نامعتبر موتور را از کار نمی‌اندازد', w3.document.getElementById('normal').getAttribute('data-pwm-dir'), 'rtl');
+  eng3.stop();
+
+  /* ۵) توقف موتور همه‌ی نشانه‌های سلکتور دلخواه را هم پاک می‌کند */
+  eng.stop();
+  eq('پاک‌سازی: هیچ نشانه‌ای نمی‌ماند', w.document.querySelectorAll('[data-pwm-dir]').length, 0);
+}
+
+/* ========================================================================
  * ۳. تست settings و css
  * ======================================================================*/
 async function testSettings() {
@@ -270,7 +347,7 @@ async function testSettings() {
   const s = St.sanitize({});
   eq('پیش‌فرض: فعال', s.enabled, true);
   eq('پیش‌فرض: حالت هوشمند', s.mode, 'smart');
-  eq('نسخه‌ی طرح', s.version, 4);
+  eq('نسخه‌ی طرح', s.version, 5);
 
   eq('حالت نامعتبر اصلاح می‌شود', St.sanitize({ mode: 'hack' }).mode, 'smart');
   eq('آستانه‌ی خارج از بازه محدود می‌شود', St.sanitize({ threshold: 99 }).threshold, 1);
@@ -317,6 +394,68 @@ async function testSettings() {
   eq('فونت سیستم بدون family سفارشی', Css.fontStack(St.sanitize({ font: { source: 'system' } })).indexOf('PWMFont'), -1);
   ok('ارقام فارسی فونت FD را انتخاب می‌کند', Css.resolveBuiltin(St.sanitize({ font: { digits: 'farsi', builtin: 'vazirmatn' } })).id === 'vazirmatn-fd');
   ok('CSS معتبر است (تعادل آکولادها)', (css.match(/{/g) || []).length === (css.match(/}/g) || []).length);
+
+  /* ---------------------------------------------- سلکتورهای دلخواه کاربر */
+  section('settings — سلکتورهای دلخواه');
+
+  ok('کلاس ساده پذیرفته می‌شود', St.isSafeSelector('.message-body'));
+  ok('سلکتور ترکیبی پذیرفته می‌شود', St.isSafeSelector('article .content > p'));
+  ok('سلکتور attribute پذیرفته می‌شود', St.isSafeSelector('[data-testid="tweetText"]'));
+  ok('آکولاد رد می‌شود', !St.isSafeSelector('.a{color:red}'));
+  ok('نقطه‌ویرگول رد می‌شود', !St.isSafeSelector('.a;background:url(x)'));
+  ok('@import رد می‌شود', !St.isSafeSelector('@import url(evil.css)'));
+  ok('کامنت CSS رد می‌شود', !St.isSafeSelector('.a/*}*/'));
+  ok('تگ HTML رد می‌شود', !St.isSafeSelector('<script>'));
+  ok('ستاره‌ی تنها رد می‌شود', !St.isSafeSelector('*'));
+  ok('body رد می‌شود', !St.isSafeSelector('body'));
+  ok('html رد می‌شود', !St.isSafeSelector('html'));
+  ok('سلکتور نامعتبر نحوی رد می‌شود', !St.isSafeSelector('.a >>> .b'));
+  ok('رشته‌ی خالی رد می‌شود', !St.isSafeSelector('   '));
+  ok('سلکتور بیش از حد بلند رد می‌شود', !St.isSafeSelector('.x'.repeat(200)));
+
+  const list = St.sanitizeSelectorList('.good\n.also-good\n.a{}\n\n.good\n<bad>');
+  eq('فهرست: نامعتبرها حذف و تکراری‌ها یکتا می‌شوند', JSON.stringify(list), JSON.stringify(['.good', '.also-good']));
+  eq('فهرست با کاما هم جدا می‌شود', St.sanitizeSelectorList('.a, .b').length, 2);
+  eq('سقف تعداد سلکتور رعایت می‌شود', St.sanitizeSelectorList(new Array(50).fill(0).map((_, i) => '.c' + i)).length, St.MAX_SELECTORS);
+  eq('ورودی غیررشته/غیرآرایه ⇒ آرایه‌ی خالی', St.sanitizeSelectorList(42).length, 0);
+
+  const ov = St.sanitizeSiteOverride({ anchors: ['.msg'], guards: ['pre'], evil: 'x', mode: 'force' });
+  eq('بازنویسی: کلید ناشناس حذف می‌شود', ov.evil, undefined);
+  eq('بازنویسی: لنگر نگه داشته می‌شود', ov.anchors[0], '.msg');
+  eq('بازنویسی: حالت اعتبارسنجی می‌شود', St.sanitizeSiteOverride({ mode: 'hack' }).mode, 'smart');
+  eq('بازنویسی خالی ⇒ null', St.sanitizeSiteOverride({}), null);
+
+  const withSel = St.sanitize({ sites: { 'Example.COM:8080': { anchors: ['.msg', '.a{}'], guards: ['pre'] } } });
+  ok('دامنه نرمال‌سازی می‌شود', !!withSel.sites['example.com']);
+  eq('سلکتور نامعتبر در ذخیره‌سازی هم فیلتر می‌شود', withSel.sites['example.com'].anchors.length, 1);
+
+  const eff = St.effective(withSel, 'example.com');
+  ok('لنگر دلخواه به پروفایل اضافه می‌شود', eff.profile.anchors.indexOf('.msg') >= 0);
+  ok('محافظ دلخواه به پروفایل اضافه می‌شود', eff.profile.guards.indexOf('pre') >= 0);
+  eq('لنگر دلخواه اول فهرست می‌آید', eff.profile.anchors[0], '.msg');
+  ok('لنگرهای عمومی هم باقی می‌مانند', eff.profile.anchors.length > 1);
+  ok('customAnchors برای اشکال‌زدایی ثبت می‌شود', eff.profile.customAnchors.length === 1);
+
+  const effKnown = St.effective(St.sanitize({ sites: { 'chatgpt.com': { anchors: ['.my-msg'] } } }), 'chatgpt.com');
+  ok('روی پروفایل آماده هم سوار می‌شود', effKnown.profile.anchors.indexOf('.my-msg') >= 0);
+  ok('و سلکتورهای خود پروفایل را پاک نمی‌کند', effKnown.profile.anchors.indexOf('[data-message-author-role]') >= 0);
+
+  const cssSel = Css.build(St.sanitize({}), effKnown.profile);
+  ok('سلکتور دلخواه در CSS تولیدی ظاهر می‌شود', cssSel.indexOf('.my-msg') >= 0 || cssSel.indexOf('pre') >= 0);
+  ok('CSS با سلکتور دلخواه هم متعادل است', (cssSel.match(/{/g) || []).length === (cssSel.match(/}/g) || []).length);
+
+  /* یک سلکتور مخرب که از فیلتر رد شده باشد نباید بتواند CSS را بشکند */
+  const nastyProfile = w.PWM.Sites.resolve('a.com');
+  nastyProfile.guards = ['.x{}evil'].concat(nastyProfile.guards);
+  const cssNasty = Css.build(St.sanitize({}), nastyProfile);
+  ok('CSS در برابر سلکتور معیوب مقاوم است', (cssNasty.match(/{/g) || []).length === (cssNasty.match(/}/g) || []).length);
+
+  /* ---------------------------------------------------- همگام‌سازی تنظیمات */
+  section('settings — همگام‌سازی');
+  eq('پیش‌فرض: همگام‌سازی روشن', s.syncEnabled, true);
+  eq('مقدار نامعتبر بولی می‌شود', St.sanitize({ syncEnabled: 'no' }).syncEnabled, true);
+  eq('خاموشی صریح حفظ می‌شود', St.sanitize({ syncEnabled: false }).syncEnabled, false);
+  ok('کلید محلی جدا اعلام شده', St.LOCAL_KEY === 'pwmLocal' && St.LOCAL_KEY !== St.KEY);
 }
 
 /* ========================================================================
@@ -427,6 +566,7 @@ async function testPerf() {
   testBidi(PWM);
   testSites(PWM);
   await testEngine();
+  await testCustomSelectors();
   await testSettings();
   testProject();
   await testPerf();
