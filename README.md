@@ -9,7 +9,7 @@
 A Chromium extension that detects Persian/Arabic text on any page and right-aligns *only that text* — without breaking code blocks, math, icons, or the site's own layout.
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-6366f1)](manifest.json)
-[![Tests](https://img.shields.io/badge/tests-122%20unit%20%2B%2088%20browser-22c55e)](test/)
+[![Tests](https://img.shields.io/badge/tests-122%20unit%20%2B%2097%20browser-22c55e)](test/)
 [![No network](https://img.shields.io/badge/network%20requests-zero-0ea5e9)](#privacy)
 [![License](https://img.shields.io/badge/license-MIT-64748b)](LICENSE)
 
@@ -158,7 +158,7 @@ Measured: 2000 paragraphs marked in ~550 ms, page still at full frame rate.
 
 ```bash
 npm test              # 122 unit tests (pure logic + jsdom DOM tests)
-npm run test:browser  # 88 integration tests in a real browser with the extension loaded
+npm run test:browser  # 97 integration tests in a real browser with the extension loaded
 npm run pack          # → dist/persian-web-mixer-v4.0.0.zip
 node tools/shots.js   # regenerate docs/*.png
 ```
@@ -191,7 +191,7 @@ Version 4 is a full rewrite. The old version was 988 lines; this one is ~3,900 i
 | Shadow DOM | periodic scan of all elements | event from MAIN-world hook |
 | Sites | 5 names listed in the popup (no logic) | 27 profiles with anchors and guards |
 | Settings | 3 toggles | full page, per-domain, import/export |
-| Tests | none | 122 unit + 88 browser |
+| Tests | none | 122 unit + 97 browser |
 
 ---
 

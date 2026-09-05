@@ -43,6 +43,10 @@
 
 * { box-sizing: border-box; }
 
+/* بدون این خط، .btn{display:inline-flex} روی [hidden] غالب می‌شود و دکمه‌ی
+ * حذف فونت همیشه دیده می‌شود. */
+[hidden] { display: none !important; }
+
 body {
   font-family: 'PWMUi', 'Vazirmatn', 'Segoe UI', Tahoma, system-ui, sans-serif;
   width: 322px;

@@ -29,7 +29,7 @@ Full rewrite. The old version was 988 lines; this one is ~3,900 in `src/`.
 - Keyboard shortcuts, right-click menu, and a toolbar badge that greys out when disabled.
 - Debug mode that outlines every block the engine touched.
 - Two locales (`fa`, `en`) via `_locales`.
-- 122 unit tests and 88 browser integration tests; `tools/pack.js` builds a release zip, `tools/shots.js` regenerates the README screenshots.
+- 122 unit tests and 97 browser integration tests; `tools/pack.js` builds a release zip, `tools/shots.js` regenerates the README screenshots.
 
 ### Changed
 

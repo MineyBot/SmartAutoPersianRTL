@@ -438,6 +438,39 @@ const setRange = (pg, sel, val) => pg.evaluate(([s, v]) => {
     eq('پاپ‌آپ بدون خطای جاوااسکریپت', popErrs.length, 0, popErrs.join(' | '));
     eq('صفحه‌ی تنظیمات بدون خطای جاوااسکریپت', optErrs.length, 0, optErrs.join(' | '));
 
+    /* --------------------------------------------- زبانه‌های صفحه‌ی تنظیمات */
+    section('زبانه‌های صفحه‌ی تنظیمات');
+    /* [hidden] در استایل‌شیت پیش‌فرض مرورگر فقط display:none است و هر قاعده‌ی
+     * نویسنده (مثل .pane{display:flex}) آن را می‌شکند؛ نتیجه این می‌شود که همه‌ی
+     * زبانه‌ها زیر هم رندر می‌شوند و کلیک روی تب‌ها هیچ اثری ندارد. */
+    const panes = () => opt.evaluate(() => Array.from(document.querySelectorAll('.pane'))
+      .map((p) => ({ id: p.dataset.pane, shown: getComputedStyle(p).display !== 'none' })));
+
+    await tap(opt, '#tabs button[data-tab="general"]');
+    await sleep(300);
+    let vis = await panes();
+    eq('در آغاز فقط یک زبانه دیده می‌شود', vis.filter((p) => p.shown).length, 1);
+    eq('و آن زبانه‌ی عمومی است', vis.find((p) => p.shown).id, 'general');
+
+    for (const tab of ['typo', 'sites', 'adv', 'lab', 'about']) {
+      await tap(opt, '#tabs button[data-tab="' + tab + '"]');
+      await sleep(280);
+      vis = await panes();
+      const shown = vis.filter((p) => p.shown);
+      ok('زبانه‌ی ' + tab + ' تنها زبانه‌ی نمایان است',
+        shown.length === 1 && shown[0].id === tab,
+        JSON.stringify(shown.map((s) => s.id)));
+    }
+
+    // عناصری که با [hidden] پنهان می‌شوند نباید با display نویسنده برگردند
+    const hiddenLeak = await opt.evaluate(() => Array.from(document.querySelectorAll('[hidden]'))
+      .filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.id || e.tagName));
+    eq('هیچ عنصر [hidden] نمایان نمانده', hiddenLeak.length, 0, hiddenLeak.join(','));
+
+    const popHiddenLeak = await pop.evaluate(() => Array.from(document.querySelectorAll('[hidden]'))
+      .filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.id || e.tagName));
+    eq('در پاپ‌آپ هم [hidden] واقعاً پنهان است', popHiddenLeak.length, 0, popHiddenLeak.join(','));
+
     section('بهداشت کنسول صفحه');
     const realErrors = pageErrors.filter((e) => !/favicon|ERR_FILE_NOT_FOUND/i.test(e));
     eq('هیچ خطای جاوااسکریپتی در صفحه رخ نداد', realErrors.length, 0, realErrors.slice(0, 3).join(' | '));

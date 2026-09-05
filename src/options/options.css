@@ -42,6 +42,11 @@
 
 * { box-sizing: border-box; }
 
+/* [hidden] در استایل‌شیت پیش‌فرض مرورگر فقط display:none است، پس هر قاعده‌ی
+ * نویسنده مثل .pane{display:flex} آن را می‌شکند و همه‌ی زبانه‌ها هم‌زمان رندر
+ * می‌شوند. این یک خط باید بالاتر از هر display دیگری بیاید. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   padding: 0 0 60px;
