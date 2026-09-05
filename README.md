@@ -28,14 +28,60 @@ Your code blocks, math, icons, buttons and the site's own layout stay exactly as
 
 ## Install
 
-1. [Download the latest release](../../releases/latest) and unzip it — or clone this repo.
-2. Open `chrome://extensions` (or `edge://extensions`, `brave://extensions`).
-3. Turn on **Developer mode**.
-4. Click **Load unpacked** and select the folder.
+Takes about a minute. No build step, no dependencies, no sign-in — it's plain JavaScript and the fonts are bundled.
 
-No build step, no dependencies, no sign-in. It's plain JavaScript and the fonts are bundled.
+**1. Get the files.** Either download and unzip [the latest release](../../releases/latest), or clone:
 
-> Chrome, Edge, Brave, Opera, Vivaldi — any Chromium 111 or newer. Not Firefox (different extension API).
+```bash
+git clone https://github.com/MineyBot/SmartAutoPersianRTL.git
+```
+
+Put the folder somewhere permanent — `Documents`, not `Downloads`. Chromium loads an unpacked extension **by path**, so moving or deleting the folder later uninstalls it.
+
+**2. Open the extensions page.** Type `chrome://extensions` in the address bar — or `edge://extensions`, `brave://extensions`, `opera://extensions`. Links don't work here; you have to type it.
+
+**3. Turn on Developer mode** (top-right toggle).
+
+**4. Click "Load unpacked"** and pick the folder that has `manifest.json` **directly inside it**. This is the one step people get wrong: if your unzipper created a wrapper folder, open it first and select the inner one. Chromium will say *"Manifest file is missing or unreadable"* if you're one level too high.
+
+That's it. The settings page opens by itself after a few seconds.
+
+### Check it worked — 60 seconds
+
+1. Open any Persian page — [fa.wikipedia.org](https://fa.wikipedia.org) is a good one. Paragraphs should sit flush right.
+2. Click the toolbar icon. The popup should name the current site and show a live block count — `۴۸ بلوک · ۱ ریشه · ۱۲ م‌ث` (blocks · roots · milliseconds).
+3. Open a page with code in it, e.g. a Persian question on Stack Overflow. **The code stays left-to-right.** That's the whole point of the extension — if code flipped, something's wrong, so please [file an issue](../../issues).
+
+Worth doing once: right-click the toolbar icon → **Pin**, so the switch is always one click away.
+
+> **The extension's own UI is in Persian.** Only the name and store description are translated; the popup and Settings page are Persian-only regardless of your browser language. Everything is labelled and grouped, but if you don't read Persian this README is your map.
+
+### Two optional extras
+
+**Local files.** To make it work on `file:///…` pages, open `chrome://extensions`, click **Details** on Persian Web Mixer, and turn on **Allow access to file URLs**. Off by default — Chromium's choice, not ours. (Verified working once granted.)
+
+**Shortcuts.** `Alt`+`Shift`+`R` toggles the current site, `Alt`+`Shift`+`E` is the master switch, `Alt`+`Shift`+`P` rescans. Remap at `chrome://extensions/shortcuts`.
+
+### Staying up to date
+
+```bash
+git pull
+```
+
+Then hit the ⟳ **reload** button on the extension's card. Your settings survive — mode, threshold, per-site rules and custom selectors are all preserved across a reload (tested, not assumed). If you installed from a zip, replace the folder's contents and reload the same way.
+
+### If something's off
+
+| Symptom | Cause and fix |
+|---|---|
+| *"Manifest file is missing or unreadable"* | You selected a parent folder. Pick the one containing `manifest.json`. |
+| Nothing happens on a page that was already open | Content scripts only attach on load. Reload the tab, or use Settings → Advanced → **Inject into open tabs**. |
+| That button says "0 tabs activated" | Not a failure — it means every open tab was already running the extension, and it skips those. |
+| Popup shows "internal page" | You're on `chrome://`, the Web Store, or a PDF viewer. No extension can touch those; switch to a normal page. |
+| Extension vanished after a restart | The folder moved, got renamed, or was deleted. Unpacked extensions are path-bound — put it back or load it again. |
+| A site right-aligns the wrong thing | Turn on Settings → Advanced → **Debug mode**; every block the engine touched gets a coloured outline. Then either fix it yourself with [custom selectors](#custom-selectors) or open an issue with that screenshot. |
+
+> Chrome, Edge, Brave, Opera, Vivaldi — any Chromium **111 or newer**. Not Firefox: its extension API differs enough that this would need a separate port.
 
 ---
 
@@ -97,6 +143,8 @@ Line height, letter/word/paragraph spacing, justification, list indent, blockquo
 ### Per-site control
 
 Switch any domain on or off on its own, or give it a different mode and font. Three scopes decide the default: every site, known sites only, or AI chatbots only.
+
+<a id="custom-selectors"></a>
 
 ### Custom selectors — teach it any site
 
